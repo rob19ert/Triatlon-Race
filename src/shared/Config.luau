@@ -134,6 +134,15 @@ local Config = {
 		NextKey = Enum.KeyCode.Right,
 	},
 
+	-- Сезоны: детали окружения с тегом Themed и атрибутом Role красятся по палитре сезона,
+	-- папки Decor/<Сезон> показываются только для текущего сезона. Применяет ThemeService.
+	Theme = {
+		Tag = "Themed",
+		RoleAttribute = "Role",
+		DecorFolder = "Decor", -- workspace.Decor/<Сезон>
+		Current = "Summer", -- сезон по умолчанию (потом — ротация/голосование)
+	},
+
 	-- Только Studio: помощники для тестов на нескольких клиентах
 	Dev = {
 		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы
