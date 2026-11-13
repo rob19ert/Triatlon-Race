@@ -10,4 +10,5 @@ return {
 	HoldBreathReadyAt = "HoldBreathReadyAt", -- number, server time, когда можно снова
 	PenaltyOwed = "PenaltyOwed", -- number, сколько штрафных кругов назначено (nil — штрафа нет)
 	PenaltyDone = "PenaltyDone", -- number, сколько уже пробежал
+	PushReadyAt = "PushReadyAt", -- number, server time, когда снова можно толкать (nil — толчок недоступен, не в гонке)
 }

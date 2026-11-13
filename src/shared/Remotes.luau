@@ -22,6 +22,7 @@ local Remotes = {
 		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)
 		FireShot = "FireShot", -- (aimYawDeg: number, aimPitchDeg: number, shotTime: number)
 		HoldBreath = "HoldBreath", -- ()
+		PushIntent = "PushIntent", -- () толкнуть соперника впереди
 	},
 }
 

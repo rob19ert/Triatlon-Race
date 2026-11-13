@@ -136,6 +136,11 @@ function ProgressTracker.stopTracking(player: Player)
 	tracked[player] = nil
 end
 
+-- Игрок ещё на трассе (в гонке и не финишировал).
+function ProgressTracker.isTracked(player: Player): boolean
+	return tracked[player] ~= nil
+end
+
 function ProgressTracker.reset()
 	table.clear(tracked)
 end

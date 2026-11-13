@@ -473,6 +473,11 @@ function ShootingService.getCompletedStages(player: Player): number
 	return n
 end
 
+-- Сколько стрельбищ на трассе.
+function ShootingService.getRangeCount(): number
+	return #ranges
+end
+
 -- Попадания и выстрелы за всю гонку.
 function ShootingService.getTotals(player: Player): (number, number)
 	local hits, shots = 0, 0

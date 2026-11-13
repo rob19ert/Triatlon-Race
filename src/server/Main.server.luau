@@ -14,6 +14,7 @@ local SERVICE_ORDER = {
 	"StaminaService",
 	"ShootingService",
 	"PenaltyService",
+	"PushService",
 	"RaceManager",
 }
 
