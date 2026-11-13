@@ -10,8 +10,13 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Types = require(ReplicatedStorage.Shared.Types)
 
 local ProgressTracker = {}
+
+-- задаются в init
+local ShootingService: any
+local PenaltyService: any
 
 local finishedEvent = Instance.new("BindableEvent")
 -- (player: Player) — игрок пересёк финиш. Срабатывает один раз, потом игрок снимается с трекинга.
@@ -133,6 +138,32 @@ end
 
 function ProgressTracker.reset()
 	table.clear(tracked)
+end
+
+-- Прогресс игрока для таблицы позиций: фаза и число «чем больше, тем дальше».
+-- Порядок внутри одной стрельбы k: бег к рубежу < стрельба < штраф < бег после штрафа.
+local STAGE = 3e6
+local function distanceAlongTrack(player: Player): number
+	local root = getRoot(player)
+	-- трасса идёт от старта вдоль -Z
+	return if root then math.max(0, startGrid.Position.Z - root.Position.Z) else 0
+end
+
+function ProgressTracker.getProgress(player: Player): (Types.RacePhase, number, number)
+	local completed = ShootingService.getCompletedStages(player)
+	if ShootingService.isShooting(player) then
+		return "Shooting", completed * STAGE + 1e6 + ShootingService.getShotsFired(player), 0
+	end
+	local penaltyLeft = PenaltyService.getOutstanding(player)
+	if completed > 0 and penaltyLeft > 0 then
+		return "Penalty", (completed - 1) * STAGE + 2e6 + (1000 - penaltyLeft), penaltyLeft
+	end
+	return "Run", completed * STAGE + distanceAlongTrack(player), 0
+end
+
+function ProgressTracker.init(services: { [string]: any })
+	ShootingService = services.ShootingService
+	PenaltyService = services.PenaltyService
 end
 
 function ProgressTracker.start()

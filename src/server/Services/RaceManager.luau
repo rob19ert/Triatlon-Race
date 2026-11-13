@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -23,6 +24,11 @@ local PenaltyService: any
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
 local playerFinishedRemote: RemoteEvent
+local standingsRemote: RemoteEvent
+
+-- в Studio — тестовые значения лобби
+local MIN_PLAYERS = if RunService:IsStudio() then Config.Race.StudioMinPlayers else Config.Race.MinPlayers
+local LOBBY_WAIT = if RunService:IsStudio() then Config.Race.StudioLobbyWaitTime else Config.Race.LobbyWaitTime
 
 local state: RaceState = "Lobby"
 local stateEndsAt = 0 -- workspace:GetServerTimeNow()
@@ -134,22 +140,91 @@ local function isFinished(player: Player): boolean
 	return false
 end
 
+---------------------------------------------------------------- таблица позиций
+
+local function finishEntry(player: Player): ResultEntry?
+	for _, entry in finishers do
+		if entry.userId == player.UserId then
+			return entry
+		end
+	end
+	return nil
+end
+
+-- Порядок: финишировавшие по месту, потом остальные по прогрессу на трассе.
+local function computeStandings(): { Types.StandingEntry }
+	type Row = { entry: Types.StandingEntry, finishPlace: number?, score: number }
+	local rows: { Row } = {}
+	for player in participants do
+		local fin = finishEntry(player)
+		if fin then
+			table.insert(rows, {
+				entry = { userId = player.UserId, name = player.Name, place = 0, phase = "Finished", penaltyLeft = 0, time = fin.time },
+				finishPlace = fin.place,
+				score = 0,
+			})
+		else
+			local phase, score, penaltyLeft = ProgressTracker.getProgress(player)
+			table.insert(rows, {
+				entry = { userId = player.UserId, name = player.Name, place = 0, phase = phase, penaltyLeft = penaltyLeft },
+				finishPlace = nil,
+				score = score,
+			})
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.finishPlace and b.finishPlace then
+			return a.finishPlace < b.finishPlace
+		elseif a.finishPlace or b.finishPlace then
+			return a.finishPlace ~= nil
+		end
+		return a.score > b.score
+	end)
+	local standings: { Types.StandingEntry } = {}
+	for i, row in rows do
+		row.entry.place = i
+		standings[i] = row.entry
+	end
+	return standings
+end
+
+local function publishStandings()
+	local standings = computeStandings()
+	standingsRemote:FireAllClients(standings)
+
+	-- догонялка: последняя треть ещё бегущих
+	local n = #standings
+	local slowFrom = n - math.ceil(n * Config.Stamina.CatchUpShare) + 1
+	for _, entry in standings do
+		local player = Players:GetPlayerByUserId(entry.userId)
+		if player then
+			local catchUp = n >= Config.Stamina.CatchUpMinRacers and entry.place >= slowFrom and entry.phase ~= "Finished"
+			StaminaService.setCatchUp(player, catchUp)
+		end
+	end
+end
+
 ---------------------------------------------------------------- этапы
 
 local function runLobby()
 	while true do
 		setState("Lobby")
-		while #Players:GetPlayers() < Config.Race.MinPlayers do
+		while #Players:GetPlayers() < MIN_PLAYERS do
 			task.wait(0.5)
 		end
 
-		setState("Lobby", Config.Race.LobbyWaitTime)
-		local deadline = os.clock() + Config.Race.LobbyWaitTime
+		setState("Lobby", LOBBY_WAIT)
+		local deadline = os.clock() + LOBBY_WAIT
 		local enough = true
 		while os.clock() < deadline do
 			task.wait(0.25)
-			if #Players:GetPlayers() < Config.Race.MinPlayers then
+			local count = #Players:GetPlayers()
+			if count < MIN_PLAYERS then
 				enough = false
+				break
+			end
+			if count >= Config.Race.MaxPlayers then
+				log("Lobby full — starting now")
 				break
 			end
 		end
@@ -204,9 +279,14 @@ local function runRacing()
 	setState("Racing", Config.Race.MaxRaceTime)
 	log("GO! %d participant(s)", #list)
 
+	local nextStandingsAt = 0
 	while true do
 		task.wait(0.1)
 		local t = os.clock()
+		if t >= nextStandingsAt then
+			nextStandingsAt = t + Config.Race.StandingsInterval
+			publishStandings()
+		end
 		if #finishers >= countParticipants() then
 			log("All participants finished")
 			break
@@ -220,12 +300,12 @@ local function runRacing()
 			break
 		end
 	end
+	publishStandings() -- финальный порядок
 	ProgressTracker.reset()
 	StaminaService.endRace()
-	ShootingService.endRace()
-	PenaltyService.endRace()
 end
 
+-- Итоги считаются до сброса стрельбы и штрафов: нужна точность стрельбы.
 local function buildResults(): { ResultEntry }
 	local results = table.clone(finishers)
 	for player in participants do
@@ -233,6 +313,14 @@ local function buildResults(): { ResultEntry }
 			table.insert(results, { userId = player.UserId, name = player.Name, dnf = true })
 		end
 	end
+	for _, entry in results do
+		local player = Players:GetPlayerByUserId(entry.userId)
+		if player then
+			entry.hits, entry.shots = ShootingService.getTotals(player)
+		end
+	end
+	ShootingService.endRace()
+	PenaltyService.endRace()
 	return results
 end
 
@@ -240,10 +328,11 @@ local function runResults()
 	local results = buildResults()
 	log("===== RESULTS =====")
 	for _, entry in results do
+		local accuracy = string.format("%d/%d", entry.hits or 0, entry.shots or 0)
 		if entry.dnf then
-			log("  DNF  %s", entry.name)
+			log("  DNF  %s  shooting %s", entry.name, accuracy)
 		else
-			log("  #%d  %s  %.2fs", entry.place :: number, entry.name, entry.time :: number)
+			log("  #%d  %s  %.2fs  shooting %s", entry.place :: number, entry.name, entry.time :: number, accuracy)
 		end
 	end
 	raceResultsRemote:FireAllClients(results)
@@ -286,6 +375,7 @@ function RaceManager.init(services: { [string]: any })
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)
+	standingsRemote = Remotes.get(Remotes.Names.Standings)
 end
 
 function RaceManager.start()

@@ -430,6 +430,31 @@ function ShootingService.isShooting(player: Player): boolean
 	return sessions[player] ~= nil
 end
 
+-- Сколько выстрелов сделано на текущем рубеже (0, если не стреляет).
+function ShootingService.getShotsFired(player: Player): number
+	local session = sessions[player]
+	return if session then C.ShotsPerStage - session.shotsLeft else 0
+end
+
+-- Сколько стрельб игрок уже завершил.
+function ShootingService.getCompletedStages(player: Player): number
+	local n = 0
+	for _ in results[player] or {} do
+		n += 1
+	end
+	return n
+end
+
+-- Попадания и выстрелы за всю гонку.
+function ShootingService.getTotals(player: Player): (number, number)
+	local hits, shots = 0, 0
+	for _, r in results[player] or {} do
+		hits += r.hits
+		shots += r.hits + r.misses
+	end
+	return hits, shots
+end
+
 function ShootingService.init(services: { [string]: any })
 	StaminaService = services.StaminaService
 	remoteStarted = Remotes.get(Remotes.Names.ShootingStarted)

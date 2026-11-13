@@ -3,9 +3,13 @@
 
 local Config = {
 	Race = {
-		MinPlayers = 1, -- для теста в Studio; для боя поставить 4
-		MaxPlayers = 12,
-		LobbyWaitTime = 10, -- с, ожидание в лобби после набора MinPlayers
+		MinPlayers = 4,
+		MaxPlayers = 12, -- при полном составе старт сразу, без ожидания
+		LobbyWaitTime = 30, -- с, ожидание в лобби после набора MinPlayers
+		-- в Studio (плейтест) — свои значения, чтобы тестировать одному и быстро
+		StudioMinPlayers = 1,
+		StudioLobbyWaitTime = 10,
+		StandingsInterval = 0.5, -- с, как часто пересчитывать и рассылать таблицу позиций
 		CountdownTime = 3, -- с, отсчёт перед стартом
 		DnfAfterWinner = 60, -- с после финиша победителя, потом DNF
 		MaxRaceTime = 7 * 60, -- с, страховка от бесконечной гонки
@@ -32,6 +36,11 @@ local Config = {
 		RedZoneEnter = 90, -- красная зона: спринт недоступен, скорость ниже
 		RedZoneExit = 70, -- выход из красной зоны
 		RedZoneSpeedMultiplier = 0.9,
+
+		-- мягкая догонялка: последняя треть таблицы восстанавливает пульс быстрее
+		CatchUpShare = 1 / 3,
+		CatchUpRecoveryBonus = 0.15,
+		CatchUpMinRacers = 3, -- при меньшем числе участников не включается
 
 		MovingSpeedThreshold = 2, -- стад/с: медленнее — считаем, что игрок стоит
 		JumpVelocityThreshold = 30, -- стад/с вверх: рост скорости через порог = прыжок

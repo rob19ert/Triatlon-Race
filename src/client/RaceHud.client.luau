@@ -35,6 +35,9 @@ status.TextScaled = true
 status.Text = ""
 status.Parent = gui
 Instance.new("UICorner", status)
+local statusLimit = Instance.new("UISizeConstraint")
+statusLimit.MaxSize = Vector2.new(360, 48)
+statusLimit.Parent = status
 
 -- лента событий (итоги стрельбы)
 local feed = Instance.new("TextLabel")
@@ -156,10 +159,11 @@ end)
 Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: { Types.ResultEntry })
 	local lines = { "РЕЗУЛЬТАТЫ", "" }
 	for _, entry in results do
+		local accuracy = if entry.shots and entry.shots > 0 then string.format("   🎯 %d/%d", entry.hits or 0, entry.shots) else ""
 		if entry.dnf then
-			table.insert(lines, string.format("DNF   %s", entry.name))
+			table.insert(lines, string.format("DNF   %s%s", entry.name, accuracy))
 		else
-			table.insert(lines, string.format("%d.   %s   %s", entry.place :: number, entry.name, formatTime(entry.time :: number)))
+			table.insert(lines, string.format("%d.   %s   %s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), accuracy))
 		end
 	end
 	resultsText.Text = table.concat(lines, "\n")

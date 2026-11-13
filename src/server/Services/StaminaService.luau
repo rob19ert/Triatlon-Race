@@ -22,6 +22,7 @@ type PlayerStamina = {
 	wantsSprint: boolean, -- намерение с клиента
 	sprinting: boolean, -- спринт реально работает
 	ignoreRedZonePenalty: boolean, -- финишная прямая: красная зона не замедляет
+	recoveryMultiplier: number, -- догонялка: >1 у отстающих
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -78,7 +79,7 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 		-- закреплён на рубеже: стоит и дышит
 		st.sprinting = false
 		st.lastVelY = 0
-		addPulse(st, -S.RestRecoveryPerSec * dt)
+		addPulse(st, -S.RestRecoveryPerSec * st.recoveryMultiplier * dt)
 		return
 	end
 
@@ -106,9 +107,11 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if st.sprinting then
 		addPulse(st, S.SprintGainPerSec * dt)
 	elseif moving then
-		st.pulse = driftToward(st.pulse, S.RunPulse, S.RunDriftPerSec * dt)
+		-- снижение пульса к RunPulse — это восстановление, оно ускоряется догонялкой
+		local rate = if st.pulse > S.RunPulse then S.RunDriftPerSec * st.recoveryMultiplier else S.RunDriftPerSec
+		st.pulse = driftToward(st.pulse, S.RunPulse, rate * dt)
 	else
-		addPulse(st, -S.RestRecoveryPerSec * dt)
+		addPulse(st, -S.RestRecoveryPerSec * st.recoveryMultiplier * dt)
 	end
 
 	local speed = if st.sprinting then Config.Movement.SprintSpeed else Config.Movement.WalkSpeed
@@ -156,6 +159,7 @@ function StaminaService.beginRace(players: { Player })
 			wantsSprint = false,
 			sprinting = false,
 			ignoreRedZonePenalty = false,
+			recoveryMultiplier = 1,
 			lastVelY = 0,
 			publishedPulse = nil,
 		}
@@ -186,6 +190,14 @@ end
 function StaminaService.isRedZone(player: Player): boolean
 	local st = active[player]
 	return st ~= nil and st.redZone
+end
+
+-- Догонялка: отстающие (последняя треть таблицы) восстанавливают пульс быстрее.
+function StaminaService.setCatchUp(player: Player, enabled: boolean)
+	local st = active[player]
+	if st then
+		st.recoveryMultiplier = if enabled then 1 + S.CatchUpRecoveryBonus else 1
+	end
 end
 
 -- Финишная прямая: красная зона не замедляет.

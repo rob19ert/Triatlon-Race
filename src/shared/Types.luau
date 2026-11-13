@@ -16,6 +16,20 @@ export type ResultEntry = {
 	place: number?, -- nil для DNF
 	time: number?, -- секунды, nil для DNF
 	dnf: boolean,
+	hits: number?, -- попаданий за всю гонку (заполняется в итогах)
+	shots: number?,
+}
+
+export type RacePhase = "Run" | "Shooting" | "Penalty" | "Finished"
+
+-- Строка таблицы позиций во время гонки.
+export type StandingEntry = {
+	userId: number,
+	name: string,
+	place: number,
+	phase: RacePhase,
+	penaltyLeft: number, -- для phase = "Penalty"
+	time: number?, -- для phase = "Finished"
 }
 
 export type ShootingStartPayload = {
