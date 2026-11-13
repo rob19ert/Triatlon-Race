@@ -15,6 +15,7 @@ local Remotes = {
 		ShootingStarted = "ShootingStarted", -- Types.ShootingStartPayload (только стрелку)
 		ShotResult = "ShotResult", -- Types.ShotResultPayload (только стрелку)
 		ShootingFinished = "ShootingFinished", -- Types.ShootingSummary (всем, лента событий)
+		Notice = "Notice", -- (text: string) короткое сообщение игроку в ленту событий
 
 		-- клиент -> сервер (намерения, сервер проверяет)
 		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)

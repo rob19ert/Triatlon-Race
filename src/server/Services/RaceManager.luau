@@ -18,6 +18,7 @@ local RaceManager = {}
 local ProgressTracker: any
 local StaminaService: any
 local ShootingService: any
+local PenaltyService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -198,6 +199,7 @@ local function runRacing()
 	ProgressTracker.beginTracking(list)
 	StaminaService.beginRace(list)
 	ShootingService.beginRace(list)
+	PenaltyService.beginRace(list)
 	releaseAll()
 	setState("Racing", Config.Race.MaxRaceTime)
 	log("GO! %d participant(s)", #list)
@@ -221,6 +223,7 @@ local function runRacing()
 	ProgressTracker.reset()
 	StaminaService.endRace()
 	ShootingService.endRace()
+	PenaltyService.endRace()
 end
 
 local function buildResults(): { ResultEntry }
@@ -279,6 +282,7 @@ function RaceManager.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
 	StaminaService = services.StaminaService
 	ShootingService = services.ShootingService
+	PenaltyService = services.PenaltyService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)

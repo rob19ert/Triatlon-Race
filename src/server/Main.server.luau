@@ -13,6 +13,7 @@ local SERVICE_ORDER = {
 	"ProgressTracker",
 	"StaminaService",
 	"ShootingService",
+	"PenaltyService",
 	"RaceManager",
 }
 

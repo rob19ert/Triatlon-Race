@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
 local Types = require(ReplicatedStorage.Shared:WaitForChild("Types"))
+local Attributes = require(ReplicatedStorage.Shared:WaitForChild("Attributes"))
 
 local player = Players.LocalPlayer
 
@@ -50,6 +51,29 @@ feed.Text = ""
 feed.Parent = gui
 local FEED_SECONDS = 4
 local feedUntil = 0
+
+local function showFeed(text: string)
+	feed.Text = text
+	feedUntil = os.clock() + FEED_SECONDS
+end
+
+-- постоянная подсказка, пока не отработан штраф
+local penaltyLabel = Instance.new("TextLabel")
+penaltyLabel.Name = "Penalty"
+penaltyLabel.AnchorPoint = Vector2.new(0.5, 0)
+penaltyLabel.Position = UDim2.new(0.5, 0, 0, 92)
+penaltyLabel.Size = UDim2.new(0.6, 0, 0, 30)
+penaltyLabel.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+penaltyLabel.BackgroundTransparency = 0.15
+penaltyLabel.TextColor3 = Color3.new(1, 1, 1)
+penaltyLabel.Font = Enum.Font.GothamBlack
+penaltyLabel.TextScaled = true
+penaltyLabel.Visible = false
+penaltyLabel.Parent = gui
+Instance.new("UICorner", penaltyLabel)
+local penaltyLimit = Instance.new("UISizeConstraint")
+penaltyLimit.MaxSize = Vector2.new(460, 30)
+penaltyLimit.Parent = penaltyLabel
 
 local resultsFrame = Instance.new("Frame")
 resultsFrame.Name = "Results"
@@ -144,11 +168,27 @@ end)
 
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)
 	local misses = summary.shots - summary.hits
-	feed.Text = if misses == 0
+	showFeed(if misses == 0
 		then string.format("%s — %d/%d", summary.name, summary.hits, summary.shots)
-		else string.format("%s — %d/%d, промахов: %d", summary.name, summary.hits, summary.shots, misses)
-	feedUntil = os.clock() + FEED_SECONDS
+		else string.format("%s — %d/%d, штрафных: %d", summary.name, summary.hits, summary.shots, misses))
 end)
+
+Remotes.get(Remotes.Names.Notice).OnClientEvent:Connect(function(text: string)
+	showFeed(text)
+end)
+
+local function updatePenaltyLabel()
+	local owed = player:GetAttribute(Attributes.PenaltyOwed)
+	local done = player:GetAttribute(Attributes.PenaltyDone)
+	if typeof(owed) == "number" and typeof(done) == "number" and done < owed then
+		penaltyLabel.Text = string.format("Штрафной круг %d/%d — беги вокруг красного острова слева", done + 1, owed)
+		penaltyLabel.Visible = true
+	else
+		penaltyLabel.Visible = false
+	end
+end
+player:GetAttributeChangedSignal(Attributes.PenaltyOwed):Connect(updatePenaltyLabel)
+player:GetAttributeChangedSignal(Attributes.PenaltyDone):Connect(updatePenaltyLabel)
 
 RunService.RenderStepped:Connect(function()
 	render()

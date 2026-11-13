@@ -82,6 +82,12 @@ local Config = {
 		TouchSensitivity = 0.02,
 	},
 
+	Penalty = {
+		LoopName = "PenaltyLoop", -- модель в Track: Near, Far (зоны круга), Check (проверка на трассе), Return (точка возврата)
+		LapsPerMiss = 1,
+		CounterOffsetY = 3, -- высота счётчика «Штраф: 1/3» над головой
+	},
+
 	Track = {
 		FolderName = "Track",
 		StartGridName = "StartGrid",

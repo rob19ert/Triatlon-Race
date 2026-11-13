@@ -26,6 +26,10 @@ local ShootingService = {}
 
 local StaminaService: any -- задаётся в init
 
+local stageFinishedEvent = Instance.new("BindableEvent")
+-- (player: Player, rangeOrder: number, hits: number, misses: number) — игрок отстрелялся и ушёл с рубежа
+ShootingService.StageFinished = stageFinishedEvent.Event
+
 type Lane = {
 	index: number,
 	eye: BasePart,
@@ -263,6 +267,7 @@ local function finishSession(player: Player, session: Session)
 	}
 	remoteFinished:FireAllClients(summary)
 	log("%s — %d/%d (%d miss)", player.Name, hits, C.ShotsPerStage, misses)
+	stageFinishedEvent:Fire(player, session.range.order, hits, misses)
 end
 
 -- Точка, где луч пересекает плоскость мишени (ось цилиндра смотрит на стрелка).

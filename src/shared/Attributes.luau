@@ -8,4 +8,6 @@ return {
 	Sprinting = "Sprinting", -- boolean, спринт реально работает (а не просто нажат)
 	HoldBreathUntil = "HoldBreathUntil", -- number, server time конца задержки дыхания
 	HoldBreathReadyAt = "HoldBreathReadyAt", -- number, server time, когда можно снова
+	PenaltyOwed = "PenaltyOwed", -- number, сколько штрафных кругов назначено (nil — штрафа нет)
+	PenaltyDone = "PenaltyDone", -- number, сколько уже пробежал
 }
