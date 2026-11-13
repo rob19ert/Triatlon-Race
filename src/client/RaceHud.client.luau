@@ -35,6 +35,22 @@ status.Text = ""
 status.Parent = gui
 Instance.new("UICorner", status)
 
+-- лента событий (итоги стрельбы)
+local feed = Instance.new("TextLabel")
+feed.Name = "Feed"
+feed.AnchorPoint = Vector2.new(0.5, 0)
+feed.Position = UDim2.new(0.5, 0, 0, 62)
+feed.Size = UDim2.new(0.6, 0, 0, 26)
+feed.BackgroundTransparency = 1
+feed.TextColor3 = Color3.new(1, 1, 1)
+feed.TextStrokeTransparency = 0.4
+feed.Font = Enum.Font.GothamBold
+feed.TextSize = 18
+feed.Text = ""
+feed.Parent = gui
+local FEED_SECONDS = 4
+local feedUntil = 0
+
 local resultsFrame = Instance.new("Frame")
 resultsFrame.Name = "Results"
 resultsFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -126,4 +142,15 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: {
 	resultsFrame.Visible = true
 end)
 
-RunService.RenderStepped:Connect(render)
+Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)
+	local misses = summary.shots - summary.hits
+	feed.Text = if misses == 0
+		then string.format("%s — %d/%d", summary.name, summary.hits, summary.shots)
+		else string.format("%s — %d/%d, промахов: %d", summary.name, summary.hits, summary.shots, misses)
+	feedUntil = os.clock() + FEED_SECONDS
+end)
+
+RunService.RenderStepped:Connect(function()
+	render()
+	feed.Visible = os.clock() < feedUntil
+end)

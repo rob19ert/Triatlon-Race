@@ -42,6 +42,44 @@ local Config = {
 		BpmAtMax = 200,
 	},
 
+	Shooting = {
+		RangeTag = "ShootingRange", -- CollectionService-тег модели стрельбища (атрибуты Order, Stance)
+		ShotsPerStage = 5,
+		MinShotInterval = 0.6, -- с, перезарядка затвора
+		ShotTimeTolerance = 0.35, -- с, насколько метка выстрела с клиента может отставать от сервера
+		AimLimitDeg = 12, -- насколько далеко от центра мишеней можно увести прицел
+		EyeAboveRoot = 1.5, -- глаза стрелка выше HumanoidRootPart
+		FinishDelay = 1, -- с после последнего выстрела до выхода с рубежа
+
+		-- по стойке (атрибут Stance у стрельбища)
+		TargetDiameter = { Prone = 1.2, Standing = 0.72 }, -- стоя на 40% меньше
+		SwayMultiplier = { Prone = 1, Standing = 1.5 },
+
+		-- качание «восьмёркой»: амплитуда растёт с пульсом
+		SwayBaseDeg = 0.05, -- минимальное качание
+		SwayPulseOffset = 30, -- ниже этого пульса качание не растёт
+		SwayDegPerPulse = 0.02, -- градусов амплитуды на единицу пульса выше SwayPulseOffset
+		SwayFrequency = 0.35, -- Гц
+
+		-- задержка дыхания
+		HoldBreathDuration = 2,
+		HoldBreathCooldown = 4, -- с после окончания задержки
+		HoldBreathPulseCost = 10, -- пульс после задержки
+		HoldBreathSwayMultiplier = 0.1,
+
+		-- ветер: уровень 0–3, направление влево/вправо, на всю гонку для каждого стрельбища
+		WindMaxLevel = 3,
+		WindDegPerLevel = 0.6, -- смещение пули в градусах на уровень
+
+		TargetOpenColor = Color3.fromRGB(20, 20, 20),
+		TargetClosedColor = Color3.fromRGB(255, 255, 255),
+
+		-- клиент
+		ScopeFov = 15,
+		MouseSensitivity = 0.012, -- градусов на пиксель
+		TouchSensitivity = 0.02,
+	},
+
 	Track = {
 		FolderName = "Track",
 		StartGridName = "StartGrid",
@@ -53,7 +91,8 @@ local Config = {
 		CheckpointTag = "Checkpoint", -- CollectionService-тег зоны начала препятствия (атрибут Order)
 		FallZoneTag = "FallZone", -- тег зоны падения (вода и т.п.)
 		KillY = -20, -- ниже этой высоты — тоже падение
-		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока	},
+		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока
+	},
 }
 
 return Config

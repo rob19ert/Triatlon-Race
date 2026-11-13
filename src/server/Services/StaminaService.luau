@@ -71,7 +71,14 @@ end
 
 local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	local humanoid, root = getHumanoidAndRoot(player)
-	if not humanoid or not root or root.Anchored or humanoid.Health <= 0 then
+	if not humanoid or not root or humanoid.Health <= 0 then
+		return
+	end
+	if root.Anchored then
+		-- закреплён на рубеже: стоит и дышит
+		st.sprinting = false
+		st.lastVelY = 0
+		addPulse(st, -S.RestRecoveryPerSec * dt)
 		return
 	end
 

@@ -18,4 +18,26 @@ export type ResultEntry = {
 	dnf: boolean,
 }
 
+export type ShootingStartPayload = {
+	eye: CFrame, -- точка и направление глаз стрелка (на центр мишеней)
+	stance: "Prone" | "Standing",
+	wind: number, -- уровень со знаком: + вправо от стрелка
+	shots: number,
+	lane: number,
+}
+
+export type ShotResultPayload = {
+	hit: boolean,
+	targetIndex: number?, -- какая мишень закрылась
+	shotsLeft: number,
+}
+
+export type ShootingSummary = {
+	userId: number,
+	name: string,
+	rangeOrder: number,
+	hits: number,
+	shots: number,
+}
+
 return {}

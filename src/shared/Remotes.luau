@@ -12,9 +12,14 @@ local Remotes = {
 		RaceState = "RaceState", -- Types.RaceStatePayload
 		RaceResults = "RaceResults", -- {Types.ResultEntry}
 		PlayerFinished = "PlayerFinished", -- Types.ResultEntry
+		ShootingStarted = "ShootingStarted", -- Types.ShootingStartPayload (только стрелку)
+		ShotResult = "ShotResult", -- Types.ShotResultPayload (только стрелку)
+		ShootingFinished = "ShootingFinished", -- Types.ShootingSummary (всем, лента событий)
 
 		-- клиент -> сервер (намерения, сервер проверяет)
 		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)
+		FireShot = "FireShot", -- (aimYawDeg: number, aimPitchDeg: number, shotTime: number)
+		HoldBreath = "HoldBreath", -- ()
 	},
 }
 

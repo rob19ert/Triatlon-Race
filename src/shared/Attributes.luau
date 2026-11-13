@@ -6,4 +6,6 @@ return {
 	Pulse = "Pulse", -- number 0–100; nil = пульс не отслеживается (не в гонке)
 	RedZone = "RedZone", -- boolean
 	Sprinting = "Sprinting", -- boolean, спринт реально работает (а не просто нажат)
+	HoldBreathUntil = "HoldBreathUntil", -- number, server time конца задержки дыхания
+	HoldBreathReadyAt = "HoldBreathReadyAt", -- number, server time, когда можно снова
 }
