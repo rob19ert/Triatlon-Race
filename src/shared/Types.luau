@@ -24,12 +24,14 @@ export type ShootingStartPayload = {
 	wind: number, -- уровень со знаком: + вправо от стрелка
 	shots: number,
 	lane: number,
+	targetSpacingDeg: number, -- угол между соседними мишенями из глаз стрелка (для подсказки про ветер)
 }
 
 export type ShotResultPayload = {
 	hit: boolean,
 	targetIndex: number?, -- какая мишень закрылась
 	shotsLeft: number,
+	impact: Vector3?, -- куда пришла пуля в плоскости мишеней (для следа на щите)
 }
 
 export type ShootingSummary = {

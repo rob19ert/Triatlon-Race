@@ -211,12 +211,19 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	root.Anchored = true
 	setHoldAttributes(player, session)
 
+	local spacingDeg = 0
+	if #lane.targets >= 2 then
+		local a = (lane.targets[1].Position - eye.Position).Unit
+		local b = (lane.targets[2].Position - eye.Position).Unit
+		spacingDeg = math.deg(math.acos(math.clamp(a:Dot(b), -1, 1)))
+	end
 	local payload: Types.ShootingStartPayload = {
 		eye = eye,
 		stance = range.stance,
 		wind = range.wind,
 		shots = C.ShotsPerStage,
 		lane = lane.index,
+		targetSpacingDeg = spacingDeg,
 	}
 	remoteStarted:FireClient(player, payload)
 	log("%s -> range %d lane %d (%s, wind %d)", player.Name, range.order, lane.index, range.stance, range.wind)
@@ -258,19 +265,23 @@ local function finishSession(player: Player, session: Session)
 	log("%s — %d/%d (%d miss)", player.Name, hits, C.ShotsPerStage, misses)
 end
 
--- Пересечение луча с плоскостью мишени и расстояние до её центра.
-local function rayHitsTarget(origin: Vector3, dir: Vector3, target: BasePart, radius: number): boolean
-	local normal = target.CFrame.RightVector -- ось цилиндра смотрит на стрелка
+-- Точка, где луч пересекает плоскость мишени (ось цилиндра смотрит на стрелка).
+local function rayPlanePoint(origin: Vector3, dir: Vector3, target: BasePart): Vector3?
+	local normal = target.CFrame.RightVector
 	local denom = dir:Dot(normal)
 	if math.abs(denom) < 1e-6 then
-		return false
+		return nil
 	end
 	local s = (target.Position - origin):Dot(normal) / denom
 	if s <= 0 then
-		return false
+		return nil
 	end
-	local point = origin + dir * s
-	return (point - target.Position).Magnitude <= radius
+	return origin + dir * s
+end
+
+local function rayHitsTarget(origin: Vector3, dir: Vector3, target: BasePart, radius: number): boolean
+	local point = rayPlanePoint(origin, dir, target)
+	return point ~= nil and (point - target.Position).Magnitude <= radius
 end
 
 local function onFireShot(player: Player, aimYaw: unknown, aimPitch: unknown, shotTime: unknown)
@@ -330,10 +341,12 @@ local function onFireShot(player: Player, aimYaw: unknown, aimPitch: unknown, sh
 		if holding then ", breath held" else ""
 	)
 
+	local firstTarget = session.lane.targets[1]
 	local result: Types.ShotResultPayload = {
 		hit = hitIndex ~= nil,
 		targetIndex = hitIndex,
 		shotsLeft = session.shotsLeft,
+		impact = if firstTarget then rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
 	}
 	remoteShotResult:FireClient(player, result)
 

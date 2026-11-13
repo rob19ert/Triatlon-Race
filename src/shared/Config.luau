@@ -75,6 +75,8 @@ local Config = {
 		TargetClosedColor = Color3.fromRGB(255, 255, 255),
 
 		-- клиент
+		ImpactMarkSeconds = 4, -- сколько виден след пули на щите
+		ImpactMarkSize = 0.3,
 		ScopeFov = 15,
 		MouseSensitivity = 0.012, -- градусов на пиксель
 		TouchSensitivity = 0.02,

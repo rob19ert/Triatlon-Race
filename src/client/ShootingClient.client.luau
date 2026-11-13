@@ -4,6 +4,7 @@
 -- Клиент шлёт только «куда целился и когда»; попадание считает сервер по той же формуле (Shared/Aim).
 
 local ContextActionService = game:GetService("ContextActionService")
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -27,6 +28,7 @@ type AimState = {
 	eye: CFrame,
 	stance: Aim.Stance,
 	wind: number,
+	targetSpacingDeg: number,
 	shotsLeft: number,
 	shotsFired: number,
 	yaw: number,
@@ -76,7 +78,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 1)
 panel.Position = UDim2.new(0.5, 0, 1, -64)
-panel.Size = UDim2.fromOffset(340, 78)
+panel.Size = UDim2.fromOffset(360, 104)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 panel.BackgroundTransparency = 0.3
 panel.Parent = gui
@@ -118,9 +120,21 @@ windLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
 windLabel.TextXAlignment = Enum.TextXAlignment.Right
 windLabel.Parent = panel
 
+-- подсказка: куда сносит пулю и куда целиться
+local windHint = Instance.new("TextLabel")
+windHint.BackgroundTransparency = 1
+windHint.Position = UDim2.fromOffset(12, 38)
+windHint.Size = UDim2.new(1, -24, 0, 26)
+windHint.Font = Enum.Font.GothamMedium
+windHint.TextSize = 15
+windHint.TextColor3 = Color3.fromRGB(255, 200, 80)
+windHint.TextXAlignment = Enum.TextXAlignment.Left
+windHint.TextWrapped = true
+windHint.Parent = panel
+
 local breathLabel = Instance.new("TextLabel")
 breathLabel.BackgroundTransparency = 1
-breathLabel.Position = UDim2.fromOffset(12, 40)
+breathLabel.Position = UDim2.fromOffset(12, 68)
 breathLabel.Size = UDim2.new(1, -24, 0, 28)
 breathLabel.Font = Enum.Font.GothamMedium
 breathLabel.TextSize = 16
@@ -158,6 +172,34 @@ local function windText(wind: number): string
 	local level = math.abs(wind)
 	local arrow = if wind > 0 then string.rep("▶", level) elseif wind < 0 then string.rep("◀", level) else "—"
 	return string.format("Ветер %s %d", arrow, level)
+end
+
+local function windHintText(wind: number, spacingDeg: number): string
+	if wind == 0 then
+		return "Ветра нет — целься прямо в мишень"
+	end
+	local side = if wind > 0 then "вправо" else "влево"
+	local aimSide = if wind > 0 then "левее" else "правее"
+	local inTargets = if spacingDeg > 0 then math.abs(Aim.windYaw(wind)) / spacingDeg else 0
+	return string.format("Пулю сносит %s ≈ на %.1f мишени — целься %s", side, inTargets, aimSide)
+end
+
+-- след пули на щите: виден только стрелку, сразу показывает поправку на ветер
+local function showImpact(state: AimState, point: Vector3, hit: boolean)
+	local mark = Instance.new("Part")
+	mark.Name = "ImpactMark"
+	mark.Shape = Enum.PartType.Ball
+	mark.Size = Vector3.one * C.ImpactMarkSize
+	mark.Anchored = true
+	mark.CanCollide = false
+	mark.CanQuery = false
+	mark.CanTouch = false
+	mark.Material = Enum.Material.Neon
+	mark.Color = if hit then Color3.fromRGB(80, 255, 120) else Color3.fromRGB(255, 60, 60)
+	-- чуть ближе к стрелку, чтобы не утонуть в мишени
+	mark.Position = point - state.eye.LookVector * 0.15
+	mark.Parent = workspace
+	Debris:AddItem(mark, C.ImpactMarkSeconds)
 end
 
 local function updateBreathLabel(t: number)
@@ -229,6 +271,7 @@ local function enterAim(payload: Types.ShootingStartPayload)
 		eye = payload.eye,
 		stance = payload.stance,
 		wind = payload.wind,
+		targetSpacingDeg = payload.targetSpacingDeg,
 		shotsLeft = payload.shots,
 		shotsFired = 0,
 		yaw = 0,
@@ -240,6 +283,7 @@ local function enterAim(payload: Types.ShootingStartPayload)
 		dot.BackgroundColor3 = DOT_EMPTY
 	end
 	windLabel.Text = windText(payload.wind)
+	windHint.Text = windHintText(payload.wind, payload.targetSpacingDeg)
 	gui.Enabled = true
 
 	ContextActionService:BindAction(ACTION_FIRE, onFireAction, true, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
@@ -311,6 +355,9 @@ Remotes.get(Remotes.Names.ShotResult).OnClientEvent:Connect(function(result: Typ
 	local dot = dots[state.shotsFired]
 	if dot then
 		dot.BackgroundColor3 = if result.hit then DOT_HIT else DOT_MISS
+	end
+	if result.impact then
+		showImpact(state, result.impact, result.hit)
 	end
 end)
 
