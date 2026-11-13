@@ -1,11 +1,12 @@
 --!strict
--- Спринт: зажать Shift (клавиатура), L3 (геймпад) или кнопку «Спринт» на экране (тач).
+-- Спринт: зажать Shift (клавиатура), L3 (геймпад) или кнопку «Спринт» на экране (тач, модуль TouchButtons).
 -- Клиент шлёт только намерение; можно ли бежать быстрее — решает сервер.
 
 local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
+local TouchButtons = require(script.Parent:WaitForChild("TouchButtons"))
 
 local ACTION = "Sprint"
 
@@ -28,7 +29,19 @@ local function onAction(_: string, state: Enum.UserInputState, _: InputObject): 
 	return Enum.ContextActionResult.Pass
 end
 
--- true = создать кнопку на экране для сенсорных устройств
-ContextActionService:BindAction(ACTION, onAction, true, Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift, Enum.KeyCode.ButtonL3)
-ContextActionService:SetTitle(ACTION, "Спринт")
-ContextActionService:SetPosition(ACTION, UDim2.new(1, -170, 1, -90))
+ContextActionService:BindAction(ACTION, onAction, false, Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift, Enum.KeyCode.ButtonL3)
+
+-- тач: держать кнопку
+TouchButtons.create({
+	name = "Sprint",
+	title = "Спринт",
+	slot = 1,
+	group = "run",
+	color = Color3.fromRGB(70, 170, 255),
+	onDown = function()
+		setSprint(true)
+	end,
+	onUp = function()
+		setSprint(false)
+	end,
+})

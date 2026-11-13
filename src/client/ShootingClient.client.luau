@@ -16,6 +16,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local Attributes = require(Shared:WaitForChild("Attributes"))
 local Aim = require(Shared:WaitForChild("Aim"))
 local Types = require(Shared:WaitForChild("Types"))
+local TouchButtons = require(script.Parent:WaitForChild("TouchButtons"))
 
 local C = Config.Shooting
 local player = Players.LocalPlayer
@@ -38,6 +39,8 @@ type AimState = {
 }
 
 local aim: AimState? = nil
+local fireButton: TouchButtons.Handle? = nil
+local breathButton: TouchButtons.Handle? = nil
 
 local fireRemote = Remotes.get(Remotes.Names.FireShot)
 local breathRemote = Remotes.get(Remotes.Names.HoldBreath)
@@ -209,10 +212,33 @@ local function updateBreathLabel(t: number)
 		breathLabel.Text = string.format("Дыхание задержано: %.1f с", holdUntil - t)
 	elseif t < readyAt then
 		breathLabel.Text = string.format("Дыхание: снова через %.1f с", readyAt - t)
-	elseif UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	elseif TouchButtons.isTouch() then
 		breathLabel.Text = "«Дыхание» — задержать, «Огонь» — выстрел"
 	else
 		breathLabel.Text = "ЛКМ — выстрел, ПКМ — задержать дыхание"
+	end
+end
+
+-- Откат на тач-кнопках: затвор и задержка дыхания.
+local function updateTouchButtons(state: AimState, t: number)
+	if fireButton then
+		local left = state.lastShotAt + C.MinShotInterval - t
+		fireButton:setCooldown(if left > 0 then left / C.MinShotInterval else 0)
+		fireButton:setTitle(if state.shotsLeft > 0 then string.format("Огонь\n%d", state.shotsLeft) else "—")
+	end
+	if breathButton then
+		local holdUntil = numberAttr(Attributes.HoldBreathUntil, 0)
+		local readyAt = numberAttr(Attributes.HoldBreathReadyAt, 0)
+		if t < holdUntil then
+			breathButton:setCooldown(0)
+			breathButton:setTitle(string.format("%.1f", holdUntil - t))
+		elseif t < readyAt then
+			breathButton:setCooldown((readyAt - t) / C.HoldBreathCooldown)
+			breathButton:setTitle(string.format("%d", math.ceil(readyAt - t)))
+		else
+			breathButton:setCooldown(0)
+			breathButton:setTitle("Дыхание")
+		end
 	end
 end
 
@@ -235,6 +261,7 @@ local function renderAim()
 	UserInputService.MouseIconEnabled = false
 	setCharacterHidden(true)
 	updateBreathLabel(t)
+	updateTouchButtons(state, t)
 end
 
 local function fire(): Enum.ContextActionResult
@@ -286,12 +313,32 @@ local function enterAim(payload: Types.ShootingStartPayload)
 	windHint.Text = windHintText(payload.wind, payload.targetSpacingDeg)
 	gui.Enabled = true
 
-	ContextActionService:BindAction(ACTION_FIRE, onFireAction, true, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
-	ContextActionService:SetTitle(ACTION_FIRE, "Огонь")
-	ContextActionService:SetPosition(ACTION_FIRE, UDim2.new(1, -110, 1, -170))
-	ContextActionService:BindAction(ACTION_BREATH, onBreathAction, true, Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2)
-	ContextActionService:SetTitle(ACTION_BREATH, "Дыхание")
-	ContextActionService:SetPosition(ACTION_BREATH, UDim2.new(1, -200, 1, -110))
+	ContextActionService:BindAction(ACTION_FIRE, onFireAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
+	ContextActionService:BindAction(ACTION_BREATH, onBreathAction, false, Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2)
+
+	-- тач: на месте кнопок бега — «Огонь» (крупная) и «Дыхание»
+	TouchButtons.setGroupHidden("run", true)
+	fireButton = TouchButtons.create({
+		name = "Fire",
+		title = "Огонь",
+		slot = 1,
+		big = true,
+		color = Color3.fromRGB(235, 70, 70),
+		onDown = function()
+			fire()
+		end,
+	})
+	breathButton = TouchButtons.create({
+		name = "Breath",
+		title = "Дыхание",
+		slot = 2,
+		color = Color3.fromRGB(70, 170, 255),
+		onDown = function()
+			if aim then
+				breathRemote:FireServer()
+			end
+		end,
+	})
 
 	RunService:BindToRenderStep(RENDER_STEP, Enum.RenderPriority.Camera.Value + 1, renderAim)
 end
@@ -305,6 +352,15 @@ local function exitAim()
 	RunService:UnbindFromRenderStep(RENDER_STEP)
 	ContextActionService:UnbindAction(ACTION_FIRE)
 	ContextActionService:UnbindAction(ACTION_BREATH)
+	if fireButton then
+		fireButton:destroy()
+		fireButton = nil
+	end
+	if breathButton then
+		breathButton:destroy()
+		breathButton = nil
+	end
+	TouchButtons.setGroupHidden("run", false)
 	gui.Enabled = false
 
 	local camera = workspace.CurrentCamera

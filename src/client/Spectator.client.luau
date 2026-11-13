@@ -38,7 +38,7 @@ gui.Enabled = false
 
 local bar = Instance.new("Frame")
 bar.AnchorPoint = Vector2.new(0.5, 1)
-bar.Position = UDim2.new(0.5, 0, 1, -96)
+bar.Position = UDim2.new(0.5, 0, 1, -120) -- выше панели пульса и иконки толчка
 bar.Size = UDim2.fromOffset(340, 44)
 bar.BackgroundTransparency = 1
 bar.Parent = gui

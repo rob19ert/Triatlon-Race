@@ -14,6 +14,10 @@ local player = Players.LocalPlayer
 
 local MAX_ROWS = 8
 local ROW_HEIGHT = 22
+-- маленький экран (телефон): компактнее, чтобы не наезжать на статус гонки
+local SMALL_MAX_ROWS = 4
+local SMALL_ROW_HEIGHT = 17
+local SMALL_WIDTH = 150
 
 -- стандартный список игроков занимает то же место
 pcall(function()
@@ -66,6 +70,20 @@ end
 
 gui.Parent = player:WaitForChild("PlayerGui")
 
+local visibleRows = MAX_ROWS
+local function applyScreenSize()
+	local screen = workspace.CurrentCamera.ViewportSize
+	local small = math.min(screen.X, screen.Y) <= 500
+	visibleRows = if small then SMALL_MAX_ROWS else MAX_ROWS
+	panel.Size = UDim2.fromOffset(if small then SMALL_WIDTH else 200, 0)
+	for _, row in rows do
+		row.Size = UDim2.new(1, 0, 0, if small then SMALL_ROW_HEIGHT else ROW_HEIGHT)
+		row.TextSize = if small then 12 else 15
+	end
+end
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyScreenSize)
+applyScreenSize()
+
 ---------------------------------------------------------------- отображение
 
 local function formatTime(seconds: number): string
@@ -103,7 +121,7 @@ Remotes.get(Remotes.Names.Standings).OnClientEvent:Connect(function(standings: {
 	end
 	local shownMine = false
 	for i, entry in standings do
-		if i > MAX_ROWS then
+		if i > visibleRows then
 			break
 		end
 		fillRow(rows[i], entry)
@@ -115,7 +133,7 @@ Remotes.get(Remotes.Names.Standings).OnClientEvent:Connect(function(standings: {
 	if not shownMine then
 		for _, entry in standings do
 			if entry.userId == player.UserId then
-				fillRow(rows[MAX_ROWS + 1], entry)
+				fillRow(rows[visibleRows + 1], entry)
 				break
 			end
 		end
