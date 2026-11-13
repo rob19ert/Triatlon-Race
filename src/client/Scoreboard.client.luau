@@ -50,8 +50,6 @@ local function phaseText(entry: Types.StandingEntry): (string, Color3)
 		return formatTime(entry.time or 0), GOLD
 	elseif entry.phase == "Shooting" then
 		return "🎯 стрельба", ACCENT
-	elseif entry.phase == "Penalty" then
-		return string.format("штраф %d", entry.penaltyLeft), Color3.fromRGB(255, 90, 90)
 	end
 	return "🏃 трасса", DIM
 end
@@ -196,6 +194,9 @@ local function renderBoard(board: Board)
 				break
 			end
 			local status, color = phaseText(entry)
+			if entry.penalty > 0 then
+				status ..= string.format("  +%dс", entry.penalty)
+			end
 			setRow(row, tostring(entry.place), entry.name, status, color, entry.place == 1)
 		end
 	elseif s == "Results" then
@@ -210,7 +211,8 @@ local function renderBoard(board: Board)
 				setRow(row, "—", entry.name, "DNF", DIM, false)
 			else
 				local photo = if entry.photoFinish then "📸 " else ""
-				setRow(row, tostring(entry.place), entry.name, photo .. formatTime(entry.time or 0), GOLD, entry.place == 1)
+				local penalty = if entry.penalty and entry.penalty > 0 then string.format(" (+%d)", entry.penalty) else ""
+				setRow(row, tostring(entry.place), entry.name, photo .. formatTime(entry.time or 0) .. penalty, GOLD, entry.place == 1)
 			end
 		end
 	else

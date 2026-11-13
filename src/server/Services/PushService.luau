@@ -1,7 +1,7 @@
 --!strict
 -- Толчок: игрок жмёт F / тач-кнопку, сервер ищет ближайшего соперника в конусе впереди
 -- и толкает его в сторону от толкающего и чуть вверх.
--- Нельзя толкать и быть толкнутым на рубеже, в штрафной петле и на финишной прямой.
+-- Нельзя толкать и быть толкнутым на рубеже и на финишной прямой.
 -- Импульс — общий модуль Lib/Knockback.
 
 local Players = game:GetService("Players")
@@ -21,7 +21,6 @@ local PushService = {}
 local RaceManager: any
 local ProgressTracker: any
 local ShootingService: any
-local PenaltyService: any
 local noticeRemote: RemoteEvent
 
 local racers: { [Player]: boolean } = {}
@@ -47,7 +46,7 @@ local function getRoot(player: Player): BasePart?
 	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- Игрок на трассе и не в защищённой зоне (рубеж, штраф, финишная прямая).
+-- Игрок на трассе и не в защищённой зоне (рубеж, финишная прямая).
 local function canPushOrBePushed(player: Player): boolean
 	if not racers[player] or not ProgressTracker.isTracked(player) then
 		return false
@@ -55,10 +54,7 @@ local function canPushOrBePushed(player: Player): boolean
 	if ShootingService.isShooting(player) then
 		return false
 	end
-	if PenaltyService.getOutstanding(player) > 0 then
-		return false
-	end
-	-- все стрельбы позади и штраф отработан = финишная прямая
+	-- все стрельбы позади = финишная прямая
 	local rangeCount = ShootingService.getRangeCount()
 	if rangeCount > 0 and ShootingService.getCompletedStages(player) >= rangeCount then
 		return false
@@ -151,7 +147,6 @@ function PushService.init(services: { [string]: any })
 	RaceManager = services.RaceManager
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
-	PenaltyService = services.PenaltyService
 	noticeRemote = Remotes.get(Remotes.Names.Notice)
 end
 

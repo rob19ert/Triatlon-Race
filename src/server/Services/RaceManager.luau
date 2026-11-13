@@ -141,16 +141,19 @@ local function onPlayerFinished(player: Player, finishClock: number)
 	if state ~= "Racing" or not participants[player] then
 		return
 	end
-	local elapsed = finishClock - raceStartClock
+	-- итоговое время = время до финишной линии + штраф за промахи
+	local penalty = PenaltyService.getSeconds(player)
+	local elapsed = finishClock - raceStartClock + penalty
 	local entry: ResultEntry = {
 		userId = player.UserId,
 		name = player.Name,
 		place = 0,
 		time = elapsed,
+		penalty = penalty,
 		dnf = false,
 	}
 	local photo = insertFinisher(entry)
-	log("%s finished #%d in %.3fs%s", player.Name, entry.place :: number, elapsed, if photo then " (PHOTO FINISH)" else "")
+	log("%s finished #%d in %.3fs (penalty %ds)%s", player.Name, entry.place :: number, elapsed, penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
 		noticeRemote:FireAllClients("📸 Фотофиниш!")
@@ -192,14 +195,14 @@ local function computeStandings(): { Types.StandingEntry }
 		local fin = finishEntry(player)
 		if fin then
 			table.insert(rows, {
-				entry = { userId = player.UserId, name = player.Name, place = 0, phase = "Finished", penaltyLeft = 0, time = fin.time },
+				entry = { userId = player.UserId, name = player.Name, place = 0, phase = "Finished", penalty = fin.penalty or 0, time = fin.time },
 				finishPlace = fin.place,
 				score = 0,
 			})
 		else
-			local phase, score, penaltyLeft = ProgressTracker.getProgress(player)
+			local phase, score = ProgressTracker.getProgress(player)
 			table.insert(rows, {
-				entry = { userId = player.UserId, name = player.Name, place = 0, phase = phase, penaltyLeft = penaltyLeft },
+				entry = { userId = player.UserId, name = player.Name, place = 0, phase = phase, penalty = PenaltyService.getSeconds(player) },
 				finishPlace = nil,
 				score = score,
 			})
@@ -361,7 +364,7 @@ local function buildResults(): { ResultEntry }
 	local results = table.clone(finishers)
 	for player in participants do
 		if not isFinished(player) then
-			table.insert(results, { userId = player.UserId, name = player.Name, dnf = true })
+			table.insert(results, { userId = player.UserId, name = player.Name, dnf = true, penalty = PenaltyService.getSeconds(player) })
 		end
 	end
 	for _, entry in results do

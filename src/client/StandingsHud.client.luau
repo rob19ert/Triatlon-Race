@@ -96,8 +96,6 @@ local function statusText(entry: Types.StandingEntry): string
 		return formatTime(entry.time or 0)
 	elseif entry.phase == "Shooting" then
 		return "стрельба"
-	elseif entry.phase == "Penalty" then
-		return string.format("штраф %d", entry.penaltyLeft)
 	end
 	return ""
 end
@@ -105,11 +103,13 @@ end
 local function fillRow(row: TextLabel, entry: Types.StandingEntry)
 	local mine = entry.userId == player.UserId
 	local status = statusText(entry)
+	local penalty = if entry.penalty > 0 then string.format("  <font color=\"#FF6464\">+%dс</font>", entry.penalty) else ""
 	row.Text = string.format(
-		"<b>%d.</b> %s%s",
+		"<b>%d.</b> %s%s%s",
 		entry.place,
 		entry.name,
-		if status ~= "" then string.format("  <font color=\"#FFC850\">%s</font>", status) else ""
+		if status ~= "" then string.format("  <font color=\"#FFC850\">%s</font>", status) else "",
+		penalty
 	)
 	row.TextColor3 = if mine then Color3.fromRGB(120, 220, 255) else Color3.new(1, 1, 1)
 	row.Visible = true

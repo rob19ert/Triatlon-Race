@@ -4,7 +4,7 @@
 --  * отдача: камера дёргается вверх и плавно возвращается, FOV на миг шире;
 --  * попадание: на мишень сверху падает белая шторка;
 --  * промах: короткая встряска камеры;
---  * серии крупно над прицелом: «2 подряд!», «🔥 3 подряд!», «ЧИСТО 5/5!».
+--  * серии крупно над прицелом: «2 подряд!», «🔥 3 подряд!», «ЧИСТО 5/5!»; промах — красное «+3 с».
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -145,7 +145,7 @@ function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vecto
 	if last and hits == totalShots then
 		showStreak(string.format("ЧИСТО %d/%d!", hits, totalShots), GOLD, true)
 	elseif not hit then
-		showStreak("мимо", RED, false)
+		showStreak(string.format("+%d с", Config.Penalty.SecondsPerMiss), RED, true) -- штраф за промах
 	elseif streak >= 4 then
 		showStreak(string.format("🔥🔥 %d подряд!", streak), ORANGE, true)
 	elseif streak == 3 then

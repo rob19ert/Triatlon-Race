@@ -62,24 +62,6 @@ local function showFeed(text: string)
 	feedUntil = os.clock() + FEED_SECONDS
 end
 
--- постоянная подсказка, пока не отработан штраф
-local penaltyLabel = Instance.new("TextLabel")
-penaltyLabel.Name = "Penalty"
-penaltyLabel.AnchorPoint = Vector2.new(0.5, 0)
-penaltyLabel.Position = UDim2.new(0.5, 0, 0, 92)
-penaltyLabel.Size = UDim2.new(0.6, 0, 0, 30)
-penaltyLabel.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-penaltyLabel.BackgroundTransparency = 0.15
-penaltyLabel.TextColor3 = Color3.new(1, 1, 1)
-penaltyLabel.Font = Enum.Font.GothamBlack
-penaltyLabel.TextScaled = true
-penaltyLabel.Visible = false
-penaltyLabel.Parent = gui
-Instance.new("UICorner", penaltyLabel)
-local penaltyLimit = Instance.new("UISizeConstraint")
-penaltyLimit.MaxSize = Vector2.new(460, 30)
-penaltyLimit.Parent = penaltyLabel
-
 local resultsFrame = Instance.new("Frame")
 resultsFrame.Name = "Results"
 resultsFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -137,7 +119,11 @@ local function render()
 		if myTime then
 			status.Text = "Финиш! " .. formatTime(myTime)
 		else
-			status.Text = formatTime(workspace:GetServerTimeNow() - current.raceStartedAt)
+			-- своё время идёт со штрафом: каждый промах сразу +N с
+			local penalty = player:GetAttribute(Attributes.PenaltyTime)
+			local p = if typeof(penalty) == "number" then penalty else 0
+			local elapsed = workspace:GetServerTimeNow() - current.raceStartedAt + p
+			status.Text = if p > 0 then string.format("%s (+%d с)", formatTime(elapsed), p) else formatTime(elapsed)
 		end
 	elseif s == "Results" then
 		status.Text = string.format("Результаты • лобби через %d", math.ceil(remaining()))
@@ -168,7 +154,8 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: {
 			table.insert(lines, string.format("DNF   %s%s", entry.name, accuracy))
 		else
 			local photo = if entry.photoFinish then "   📸" else ""
-			table.insert(lines, string.format("%d.   %s   %s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), accuracy, photo))
+			local penalty = if entry.penalty and entry.penalty > 0 then string.format(" (+%d с)", entry.penalty) else ""
+			table.insert(lines, string.format("%d.   %s   %s%s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), penalty, accuracy, photo))
 		end
 	end
 	resultsText.Text = table.concat(lines, "\n")
@@ -191,19 +178,6 @@ end)
 Remotes.get(Remotes.Names.Notice).OnClientEvent:Connect(function(text: string)
 	showFeed(text)
 end)
-
-local function updatePenaltyLabel()
-	local owed = player:GetAttribute(Attributes.PenaltyOwed)
-	local done = player:GetAttribute(Attributes.PenaltyDone)
-	if typeof(owed) == "number" and typeof(done) == "number" and done < owed then
-		penaltyLabel.Text = string.format("Штрафной круг %d/%d — на развилке налево, вокруг красного острова", done + 1, owed)
-		penaltyLabel.Visible = true
-	else
-		penaltyLabel.Visible = false
-	end
-end
-player:GetAttributeChangedSignal(Attributes.PenaltyOwed):Connect(updatePenaltyLabel)
-player:GetAttributeChangedSignal(Attributes.PenaltyDone):Connect(updatePenaltyLabel)
 
 RunService.RenderStepped:Connect(function()
 	render()

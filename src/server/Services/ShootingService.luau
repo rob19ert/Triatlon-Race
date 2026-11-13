@@ -29,6 +29,10 @@ local stageFinishedEvent = Instance.new("BindableEvent")
 -- (player: Player, rangeOrder: number, hits: number, misses: number) — игрок отстрелялся и ушёл с рубежа
 ShootingService.StageFinished = stageFinishedEvent.Event
 
+local shotMissedEvent = Instance.new("BindableEvent")
+-- (player: Player) — промах (сразу после выстрела): PenaltyService прибавляет штрафное время
+ShootingService.ShotMissed = shotMissedEvent.Event
+
 type Lane = {
 	index: number,
 	eye: BasePart,
@@ -377,6 +381,9 @@ local function onFireShot(player: Player, shotTime: unknown)
 		impact = if firstTarget then rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
 	}
 	remoteShotResult:FireClient(player, result)
+	if not hitIndex then
+		shotMissedEvent:Fire(player)
+	end
 
 	if session.shotsLeft == 0 then
 		session.finishing = true

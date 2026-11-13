@@ -14,14 +14,15 @@ export type ResultEntry = {
 	userId: number,
 	name: string,
 	place: number?, -- nil для DNF
-	time: number?, -- секунды, nil для DNF
+	time: number?, -- секунды со штрафом, nil для DNF
+	penalty: number?, -- штрафное время в составе time, с
 	dnf: boolean,
 	hits: number?, -- попаданий за всю гонку (заполняется в итогах)
 	shots: number?,
 	photoFinish: boolean?, -- разница с соседом < PhotoFinishGap
 }
 
-export type RacePhase = "Run" | "Shooting" | "Penalty" | "Finished"
+export type RacePhase = "Run" | "Shooting" | "Finished"
 
 -- Строка таблицы позиций во время гонки.
 export type StandingEntry = {
@@ -29,8 +30,8 @@ export type StandingEntry = {
 	name: string,
 	place: number,
 	phase: RacePhase,
-	penaltyLeft: number, -- для phase = "Penalty"
-	time: number?, -- для phase = "Finished"
+	penalty: number, -- накопленное штрафное время, с
+	time: number?, -- для phase = "Finished" (со штрафом)
 }
 
 export type ShootingStartPayload = {

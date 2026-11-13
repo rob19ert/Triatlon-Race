@@ -26,7 +26,6 @@ local spectating = false
 local PHASE_TEXT: { [string]: string } = {
 	Run = "трасса",
 	Shooting = "стрельба",
-	Penalty = "штраф",
 }
 
 ---------------------------------------------------------------- UI
@@ -166,10 +165,9 @@ local function update()
 	end
 
 	gui.Enabled = true
-	local phase = if entry.phase == "Penalty"
-		then string.format("штраф %d", entry.penaltyLeft)
-		else (PHASE_TEXT[entry.phase] or "")
-	label.Text = string.format("👀 %s • %d место • %s", entry.name, entry.place, phase)
+	local phase = PHASE_TEXT[entry.phase] or ""
+	local penalty = if entry.penalty > 0 then string.format(" • +%d с", entry.penalty) else ""
+	label.Text = string.format("👀 %s • %d место • %s%s", entry.name, entry.place, phase, penalty)
 	prevButton.Visible = #list > 1
 	nextButton.Visible = #list > 1
 end
