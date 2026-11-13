@@ -27,7 +27,7 @@ local playerFinishedRemote: RemoteEvent
 local standingsRemote: RemoteEvent
 
 -- в Studio — тестовые значения лобби
-local MIN_PLAYERS = if RunService:IsStudio() then Config.Race.StudioMinPlayers else Config.Race.MinPlayers
+local MIN_PLAYERS = Config.Race.MinPlayers
 local LOBBY_WAIT = if RunService:IsStudio() then Config.Race.StudioLobbyWaitTime else Config.Race.LobbyWaitTime
 
 local state: RaceState = "Lobby"

@@ -3,12 +3,10 @@
 
 local Config = {
 	Race = {
-		MinPlayers = 4,
+		MinPlayers = 1, -- гонка стартует по таймеру лобби с любым числом игроков
 		MaxPlayers = 12, -- при полном составе старт сразу, без ожидания
 		LobbyWaitTime = 30, -- с, ожидание в лобби после набора MinPlayers
-		-- в Studio (плейтест) — свои значения, чтобы тестировать одному и быстро
-		StudioMinPlayers = 1,
-		StudioLobbyWaitTime = 10,
+		StudioLobbyWaitTime = 10, -- в Studio (плейтест) ждём меньше
 		StandingsInterval = 0.5, -- с, как часто пересчитывать и рассылать таблицу позиций
 		CountdownTime = 3, -- с, отсчёт перед стартом
 		DnfAfterWinner = 60, -- с после финиша победителя, потом DNF
