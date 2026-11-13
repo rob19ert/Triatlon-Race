@@ -1,13 +1,12 @@
 --!strict
 -- Стрельбище: занятие рубежа, выстрелы, качание, ветер, задержка дыхания, итог стрельбы.
--- Всё решает сервер. Клиент присылает только «куда целился и когда нажал»;
--- качание (Shared/Aim) и ветер сервер добавляет к направлению сам.
+-- Всё решает сервер. Мушка — маятник по формуле Shared/Aim; клиент присылает только
+-- «когда нажал», сервер сам считает, где была мушка.
 --
 -- Структура стрельбища в мире (модель с тегом Config.Shooting.RangeTag):
 --   атрибуты: Order (номер стрельбы), Stance ("Prone"/"Standing")
 --   Entry — невидимая зона поперёк трассы: кто в неё вошёл, тот идёт на рубеж
 --   Lanes/LaneN (атрибут Index): Eye — точка глаз стрелка, Target1..5 — мишени
---   FlagPole.WindLabel.Text — подпись ветра
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -42,7 +41,6 @@ type Range = {
 	stance: Aim.Stance,
 	entry: BasePart,
 	lanes: { Lane },
-	wind: number, -- уровень со знаком на текущую гонку
 }
 
 type Session = {
@@ -53,6 +51,8 @@ type Session = {
 	lastShotAt: number,
 	holdUntil: number,
 	holdReadyAt: number,
+	holds: { Aim.Hold },
+	track: Aim.Track,
 	finishing: boolean,
 }
 
@@ -67,6 +67,7 @@ local results: { [Player]: { [number]: StageResult } } = {} -- по Order стр
 local remoteStarted: RemoteEvent
 local remoteShotResult: RemoteEvent
 local remoteFinished: RemoteEvent
+local trackRng = Random.new()
 
 local function log(fmt: string, ...: any)
 	print("[ShootingService] " .. string.format(fmt, ...))
@@ -141,28 +142,7 @@ local function loadRange(model: Model): Range?
 		stance = if stance == "Standing" then "Standing" else "Prone",
 		entry = entry,
 		lanes = lanes,
-		wind = 0,
 	}
-end
-
-local function setWindLabel(range: Range)
-	local label = range.model:FindFirstChild("WindLabel", true)
-	local text = label and label:FindFirstChild("Text")
-	if text and text:IsA("TextLabel") then
-		local level = math.abs(range.wind)
-		local arrow = if range.wind > 0 then string.rep("▶", level) elseif range.wind < 0 then string.rep("◀", level) else "—"
-		text.Text = string.format("Ветер %s %d", arrow, level)
-	end
-	-- флажок: длина по силе ветра, развевается по направлению (+Z — вправо от стрелка)
-	local flag = range.model:FindFirstChild("Flag")
-	local pole = range.model:FindFirstChild("FlagPole")
-	if flag and flag:IsA("BasePart") and pole and pole:IsA("BasePart") then
-		local length = 0.5 + math.abs(range.wind) * 1.2
-		local dir = if range.wind >= 0 then 1 else -1
-		local top = pole.Position + Vector3.new(0, pole.Size.Y / 2 - 1, 0)
-		flag.Size = Vector3.new(0.1, 1.5, length)
-		flag.CFrame = CFrame.new(top + Vector3.new(0, 0, dir * length / 2))
-	end
 end
 
 local function resetLaneTargets(lane: Lane)
@@ -175,9 +155,6 @@ local function resetRange(range: Range)
 	for _, lane in range.lanes do
 		resetLaneTargets(lane)
 	end
-	local level = math.random(0, C.WindMaxLevel)
-	range.wind = if math.random() < 0.5 then -level else level
-	setWindLabel(range)
 end
 
 ---------------------------------------------------------------- рубеж
@@ -222,6 +199,24 @@ local function startSession(player: Player, range: Range, root: BasePart)
 
 	laneOccupant[lane] = player
 	resetLaneTargets(lane) -- после предыдущего стрелка мишени могли остаться закрытыми
+
+	local eye = lane.eye.CFrame
+	local spacingDeg = 0
+	if #lane.targets >= 2 then
+		local a = (lane.targets[1].Position - eye.Position).Unit
+		local b = (lane.targets[2].Position - eye.Position).Unit
+		spacingDeg = math.deg(math.acos(math.clamp(a:Dot(b), -1, 1)))
+	end
+	-- маятник: скорость — по пульсу на входе, фаза — случайная (чтобы не начинать всегда с центра)
+	local pulse = StaminaService.getPulse(player) or Config.Stamina.StartPulse
+	local track: Aim.Track = {
+		t0 = now(),
+		phase0 = trackRng:NextNumber(0, 2 * math.pi),
+		speed = Aim.pendulumSpeed(pulse, range.stance),
+		hAmp = C.PendulumWidth * spacingDeg,
+		tremorSeed = trackRng:NextNumber(0, 2 * math.pi),
+	}
+
 	local session: Session = {
 		range = range,
 		lane = lane,
@@ -230,12 +225,13 @@ local function startSession(player: Player, range: Range, root: BasePart)
 		lastShotAt = -math.huge,
 		holdUntil = 0,
 		holdReadyAt = 0,
+		holds = {},
+		track = track,
 		finishing = false,
 	}
 	sessions[player] = session
 
 	-- ставим на рубеж лицом к мишеням и фиксируем
-	local eye = lane.eye.CFrame
 	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
 	local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
 	root.AssemblyLinearVelocity = Vector3.zero
@@ -243,22 +239,24 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	root.Anchored = true
 	setHoldAttributes(player, session)
 
-	local spacingDeg = 0
-	if #lane.targets >= 2 then
-		local a = (lane.targets[1].Position - eye.Position).Unit
-		local b = (lane.targets[2].Position - eye.Position).Unit
-		spacingDeg = math.deg(math.acos(math.clamp(a:Dot(b), -1, 1)))
-	end
 	local payload: Types.ShootingStartPayload = {
 		eye = eye,
 		stance = range.stance,
-		wind = range.wind,
 		shots = C.ShotsPerStage,
 		lane = lane.index,
 		targetSpacingDeg = spacingDeg,
+		track = track,
 	}
 	remoteStarted:FireClient(player, payload)
-	log("%s -> range %d lane %d (%s, wind %d)", player.Name, range.order, lane.index, range.stance, range.wind)
+	log(
+		"%s -> range %d lane %d (%s, pulse %d, period %.2fs)",
+		player.Name,
+		range.order,
+		lane.index,
+		range.stance,
+		math.floor(pulse + 0.5),
+		2 * math.pi / track.speed
+	)
 end
 
 local function endSession(player: Player, session: Session)
@@ -317,21 +315,19 @@ local function rayHitsTarget(origin: Vector3, dir: Vector3, target: BasePart, ra
 	return point ~= nil and (point - target.Position).Magnitude <= radius
 end
 
-local function onFireShot(player: Player, aimYaw: unknown, aimPitch: unknown, shotTime: unknown)
+local function onFireShot(player: Player, shotTime: unknown)
 	local session = sessions[player]
 	if not session or session.finishing or session.shotsLeft <= 0 then
 		return
 	end
-	if not (isFiniteNumber(aimYaw) and isFiniteNumber(aimPitch) and isFiniteNumber(shotTime)) then
+	if not isFiniteNumber(shotTime) then
 		return
 	end
 	local t = now()
 	if t - session.lastShotAt < C.MinShotInterval then
 		return -- затвор ещё не перезаряжен
 	end
-	local yaw = math.clamp(aimYaw :: number, -C.AimLimitDeg, C.AimLimitDeg)
-	local pitch = math.clamp(aimPitch :: number, -C.AimLimitDeg, C.AimLimitDeg)
-	-- метка времени с клиента нужна, чтобы качание совпало с тем, что он видел;
+	-- метка времени с клиента нужна, чтобы мушка совпала с тем, что он видел;
 	-- принимаем только в узком окне назад от серверного «сейчас»
 	local swayTime = math.clamp(shotTime :: number, t - C.ShotTimeTolerance, t)
 
@@ -340,9 +336,9 @@ local function onFireShot(player: Player, aimYaw: unknown, aimPitch: unknown, sh
 
 	local range = session.range
 	local pulse = StaminaService.getPulse(player) or Config.Stamina.StartPulse
-	local holding = swayTime < session.holdUntil
-	local swayYaw, swayPitch = Aim.swayOffset(swayTime, pulse, range.stance, holding)
-	local shot = Aim.cframe(session.lane.eye.CFrame, yaw + swayYaw + Aim.windYaw(range.wind), pitch + swayPitch)
+	local holding = Aim.isHolding(session.holds, swayTime)
+	local swayYaw, swayPitch = Aim.crosshair(session.track, swayTime, session.holds, pulse, range.stance)
+	local shot = Aim.cframe(session.lane.eye.CFrame, swayYaw, swayPitch)
 
 	local radius = C.TargetDiameter[range.stance] / 2
 	local hitIndex: number? = nil
@@ -363,14 +359,13 @@ local function onFireShot(player: Player, aimYaw: unknown, aimPitch: unknown, sh
 		session.lane.targets[hitIndex].Color = C.TargetClosedColor
 	end
 	log(
-		"%s shot %d: %s (pulse %d, sway %.2f/%.2f, wind %d%s)",
+		"%s shot %d: %s (pulse %d, sway %.2f/%.2f%s)",
 		player.Name,
 		C.ShotsPerStage - session.shotsLeft,
 		if hitIndex then "HIT #" .. hitIndex else (if hitClosed then "miss (closed target)" else "miss"),
 		math.floor(pulse + 0.5),
 		swayYaw,
 		swayPitch,
-		range.wind,
 		if holding then ", breath held" else ""
 	)
 
@@ -404,6 +399,7 @@ local function onHoldBreath(player: Player)
 	end
 	session.holdUntil = t + C.HoldBreathDuration
 	session.holdReadyAt = session.holdUntil + C.HoldBreathCooldown
+	table.insert(session.holds, { start = t, finish = session.holdUntil })
 	setHoldAttributes(player, session)
 	task.delay(C.HoldBreathDuration, function()
 		StaminaService.addPulse(player, C.HoldBreathPulseCost)

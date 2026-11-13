@@ -36,10 +36,16 @@ export type StandingEntry = {
 export type ShootingStartPayload = {
 	eye: CFrame, -- точка и направление глаз стрелка (на центр мишеней)
 	stance: "Prone" | "Standing",
-	wind: number, -- уровень со знаком: + вправо от стрелка
 	shots: number,
 	lane: number,
-	targetSpacingDeg: number, -- угол между соседними мишенями из глаз стрелка (для подсказки про ветер)
+	targetSpacingDeg: number, -- угол между соседними мишенями из глаз стрелка
+	track: { -- маятник мушки на эту стрельбу (Shared/Aim.Track)
+		t0: number,
+		phase0: number,
+		speed: number,
+		hAmp: number,
+		tremorSeed: number,
+	},
 }
 
 export type ShotResultPayload = {

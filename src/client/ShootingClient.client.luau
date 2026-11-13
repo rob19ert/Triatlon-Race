@@ -1,7 +1,7 @@
 --!strict
 -- Режим прицела на рубеже: камера из глаз стрелка с оптикой, визуальное качание,
--- ввод выстрела и задержки дыхания, HUD патронов/ветра/дыхания.
--- Клиент шлёт только «куда целился и когда»; попадание считает сервер по той же формуле (Shared/Aim).
+-- мушка-маятник, ввод выстрела и задержки дыхания, HUD патронов/ветра/дыхания.
+-- Клиент шлёт только «когда нажал»; где была мушка и попал ли, сервер считает по той же формуле (Shared/Aim).
 
 local ContextActionService = game:GetService("ContextActionService")
 local Debris = game:GetService("Debris")
@@ -18,6 +18,7 @@ local Aim = require(Shared:WaitForChild("Aim"))
 local Types = require(Shared:WaitForChild("Types"))
 local TouchButtons = require(script.Parent:WaitForChild("TouchButtons"))
 local Fx = require(script.Parent:WaitForChild("Fx"))
+local ShotFeedback = require(script.Parent:WaitForChild("ShotFeedback"))
 
 local C = Config.Shooting
 local player = Players.LocalPlayer
@@ -29,12 +30,12 @@ local RENDER_STEP = "ShootingCamera"
 type AimState = {
 	eye: CFrame,
 	stance: Aim.Stance,
-	wind: number,
 	targetSpacingDeg: number,
 	shotsLeft: number,
 	shotsFired: number,
-	yaw: number,
-	pitch: number,
+	track: Aim.Track, -- маятник мушки (с сервера)
+	holds: { Aim.Hold }, -- задержки дыхания за эту стрельбу
+	lastHoldUntil: number,
 	lastShotAt: number,
 	savedFov: number,
 }
@@ -54,7 +55,7 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Enabled = false
 
--- перекрестие в центре экрана
+-- мушка: ходит по экрану сама (маятник), игрок жмёт «Огонь», когда она на мишени
 local cross = Instance.new("Frame")
 cross.Name = "Crosshair"
 cross.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -82,7 +83,7 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 1)
 panel.Position = UDim2.new(0.5, 0, 1, -64)
-panel.Size = UDim2.fromOffset(360, 104)
+panel.Size = UDim2.fromOffset(360, 74)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 panel.BackgroundTransparency = 0.3
 panel.Parent = gui
@@ -113,32 +114,9 @@ for i = 1, C.ShotsPerStage do
 	dots[i] = dot
 end
 
-local windLabel = Instance.new("TextLabel")
-windLabel.BackgroundTransparency = 1
-windLabel.AnchorPoint = Vector2.new(1, 0)
-windLabel.Position = UDim2.new(1, -12, 0, 8)
-windLabel.Size = UDim2.fromOffset(140, 24)
-windLabel.Font = Enum.Font.GothamBold
-windLabel.TextSize = 18
-windLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
-windLabel.TextXAlignment = Enum.TextXAlignment.Right
-windLabel.Parent = panel
-
--- подсказка: куда сносит пулю и куда целиться
-local windHint = Instance.new("TextLabel")
-windHint.BackgroundTransparency = 1
-windHint.Position = UDim2.fromOffset(12, 38)
-windHint.Size = UDim2.new(1, -24, 0, 26)
-windHint.Font = Enum.Font.GothamMedium
-windHint.TextSize = 15
-windHint.TextColor3 = Color3.fromRGB(255, 200, 80)
-windHint.TextXAlignment = Enum.TextXAlignment.Left
-windHint.TextWrapped = true
-windHint.Parent = panel
-
 local breathLabel = Instance.new("TextLabel")
 breathLabel.BackgroundTransparency = 1
-breathLabel.Position = UDim2.fromOffset(12, 68)
+breathLabel.Position = UDim2.fromOffset(12, 38)
 breathLabel.Size = UDim2.new(1, -24, 0, 28)
 breathLabel.Font = Enum.Font.GothamMedium
 breathLabel.TextSize = 16
@@ -147,6 +125,7 @@ breathLabel.TextXAlignment = Enum.TextXAlignment.Left
 breathLabel.TextWrapped = true
 breathLabel.Parent = panel
 
+ShotFeedback.attach(gui)
 gui.Parent = player:WaitForChild("PlayerGui")
 
 ---------------------------------------------------------------- прицел
@@ -170,22 +149,6 @@ local function setCharacterHidden(hidden: boolean)
 			d.LocalTransparencyModifier = if hidden then 1 else 0
 		end
 	end
-end
-
-local function windText(wind: number): string
-	local level = math.abs(wind)
-	local arrow = if wind > 0 then string.rep("▶", level) elseif wind < 0 then string.rep("◀", level) else "—"
-	return string.format("Ветер %s %d", arrow, level)
-end
-
-local function windHintText(wind: number, spacingDeg: number): string
-	if wind == 0 then
-		return "Ветра нет — целься прямо в мишень"
-	end
-	local side = if wind > 0 then "вправо" else "влево"
-	local aimSide = if wind > 0 then "левее" else "правее"
-	local inTargets = if spacingDeg > 0 then math.abs(Aim.windYaw(wind)) / spacingDeg else 0
-	return string.format("Пулю сносит %s ≈ на %.1f мишени — целься %s", side, inTargets, aimSide)
 end
 
 -- след пули на щите: виден только стрелку, сразу показывает поправку на ветер
@@ -214,9 +177,9 @@ local function updateBreathLabel(t: number)
 	elseif t < readyAt then
 		breathLabel.Text = string.format("Дыхание: снова через %.1f с", readyAt - t)
 	elseif TouchButtons.isTouch() then
-		breathLabel.Text = "«Дыхание» — задержать, «Огонь» — выстрел"
+		breathLabel.Text = "«Огонь» — когда мушка на мишени • «Дыхание» — замедлить"
 	else
-		breathLabel.Text = "ЛКМ — выстрел, ПКМ — задержать дыхание"
+		breathLabel.Text = "ЛКМ — выстрел, когда мушка на мишени • ПКМ — задержать дыхание"
 	end
 end
 
@@ -250,13 +213,26 @@ local function renderAim()
 	end
 	local t = now()
 	local pulse = numberAttr(Attributes.Pulse, Config.Stamina.StartPulse)
-	local holding = t < numberAttr(Attributes.HoldBreathUntil, 0)
-	local swayYaw, swayPitch = Aim.swayOffset(t, pulse, state.stance, holding)
 
+	-- новая задержка дыхания: запоминаем интервал (по нему маятник замедляется — так же считает сервер)
+	local holdUntil = numberAttr(Attributes.HoldBreathUntil, 0)
+	if holdUntil > state.lastHoldUntil then
+		state.lastHoldUntil = holdUntil
+		table.insert(state.holds, { start = holdUntil - C.HoldBreathDuration, finish = holdUntil })
+	end
+
+	-- камера неподвижно смотрит на мишени; отдача и встряска — только картинка
 	local camera = workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Scriptable
-	camera.FieldOfView = C.ScopeFov
-	camera.CFrame = Aim.cframe(state.eye, state.yaw + swayYaw, state.pitch + swayPitch)
+	local kickYaw, kickPitch, kickFov = ShotFeedback.cameraOffset()
+	camera.FieldOfView = C.ScopeFov + kickFov
+	camera.CFrame = Aim.cframe(state.eye, kickYaw, kickPitch)
+
+	-- мушка по той же формуле, что и на сервере
+	local yaw, pitch = Aim.crosshair(state.track, t, state.holds, pulse, state.stance)
+	local aimPoint = state.eye.Position + Aim.cframe(state.eye, yaw, pitch).LookVector * 100
+	local screen = camera:WorldToViewportPoint(aimPoint)
+	cross.Position = UDim2.fromOffset(screen.X, screen.Y)
 
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	UserInputService.MouseIconEnabled = false
@@ -275,7 +251,8 @@ local function fire(): Enum.ContextActionResult
 		return Enum.ContextActionResult.Sink
 	end
 	state.lastShotAt = t
-	fireRemote:FireServer(state.yaw, state.pitch, t)
+	fireRemote:FireServer(t)
+	ShotFeedback.onFire()
 	return Enum.ContextActionResult.Sink
 end
 
@@ -298,20 +275,19 @@ local function enterAim(payload: Types.ShootingStartPayload)
 	aim = {
 		eye = payload.eye,
 		stance = payload.stance,
-		wind = payload.wind,
 		targetSpacingDeg = payload.targetSpacingDeg,
 		shotsLeft = payload.shots,
 		shotsFired = 0,
-		yaw = 0,
-		pitch = 0,
+		track = payload.track,
+		holds = {},
+		lastHoldUntil = numberAttr(Attributes.HoldBreathUntil, 0),
 		lastShotAt = -math.huge,
 		savedFov = camera.FieldOfView,
 	}
 	for _, dot in dots do
 		dot.BackgroundColor3 = DOT_EMPTY
 	end
-	windLabel.Text = windText(payload.wind)
-	windHint.Text = windHintText(payload.wind, payload.targetSpacingDeg)
+	ShotFeedback.reset()
 	gui.Enabled = true
 
 	ContextActionService:BindAction(ACTION_FIRE, onFireAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
@@ -372,29 +348,6 @@ local function exitAim()
 	setCharacterHidden(false)
 end
 
----------------------------------------------------------------- ввод прицела
-
-local function addAim(dx: number, dy: number, sensitivity: number)
-	local state = aim
-	if not state then
-		return
-	end
-	state.yaw = math.clamp(state.yaw + dx * sensitivity, -C.AimLimitDeg, C.AimLimitDeg)
-	state.pitch = math.clamp(state.pitch - dy * sensitivity, -C.AimLimitDeg, C.AimLimitDeg)
-end
-
-UserInputService.InputChanged:Connect(function(input, _)
-	if aim and input.UserInputType == Enum.UserInputType.MouseMovement then
-		addAim(input.Delta.X, input.Delta.Y, C.MouseSensitivity)
-	end
-end)
-
-UserInputService.TouchMoved:Connect(function(touch, processed)
-	if aim and not processed then
-		addAim(touch.Delta.X, touch.Delta.Y, C.TouchSensitivity)
-	end
-end)
-
 ---------------------------------------------------------------- события сервера
 
 Remotes.get(Remotes.Names.ShootingStarted).OnClientEvent:Connect(function(payload: Types.ShootingStartPayload)
@@ -419,6 +372,7 @@ Remotes.get(Remotes.Names.ShotResult).OnClientEvent:Connect(function(result: Typ
 	if result.hit and result.impact then
 		Fx.burst("Confetti", result.impact)
 	end
+	ShotFeedback.onResult(result.hit, result.targetIndex, result.impact, state.eye.Position, state.shotsFired, state.shotsFired + result.shotsLeft)
 end)
 
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)

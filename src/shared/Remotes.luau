@@ -21,7 +21,7 @@ local Remotes = {
 
 		-- клиент -> сервер (намерения, сервер проверяет)
 		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)
-		FireShot = "FireShot", -- (aimYawDeg: number, aimPitchDeg: number, shotTime: number)
+		FireShot = "FireShot", -- (shotTime: number) — когда нажал «Огонь»; куда была мушка, сервер считает сам
 		HoldBreath = "HoldBreath", -- ()
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
 		SpectateFocus = "SpectateFocus", -- (targetUserId: number) зритель смотрит за этим гонщиком; 0 — ни за кем

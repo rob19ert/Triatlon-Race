@@ -57,39 +57,49 @@ local Config = {
 		ShotsPerStage = 5,
 		MinShotInterval = 0.6, -- с, перезарядка затвора
 		ShotTimeTolerance = 0.35, -- с, насколько метка выстрела с клиента может отставать от сервера
-		AimLimitDeg = 12, -- насколько далеко от центра мишеней можно увести прицел
 		EyeAboveRoot = 1.5, -- глаза стрелка выше HumanoidRootPart
 		FinishDelay = 1, -- с после последнего выстрела до выхода с рубежа
 
 		-- по стойке (атрибут Stance у стрельбища)
 		TargetDiameter = { Prone = 1.2, Standing = 0.72 }, -- стоя на 40% меньше
-		SwayMultiplier = { Prone = 1, Standing = 1.5 },
+		StanceSpeedMultiplier = { Prone = 1, Standing = 1.2 }, -- маятник стоя быстрее
+		TremorMultiplier = { Prone = 1, Standing = 1.5 }, -- и трясёт сильнее
 
-		-- качание «восьмёркой»: амплитуда растёт с пульсом
-		SwayBaseDeg = 0.05, -- минимальное качание
-		SwayPulseOffset = 30, -- ниже этого пульса качание не растёт
-		SwayDegPerPulse = 0.02, -- градусов амплитуды на единицу пульса выше SwayPulseOffset
-		SwayFrequency = 0.35, -- Гц
+		-- Мушка-маятник: сама ходит слева направо через все мишени, игрок только жмёт «Огонь» вовремя.
+		-- Скорость фиксируется по пульсу в момент выхода на рубеж (прибежал уставшим — быстрый маятник).
+		PendulumWidth = 2.6, -- размах в шагах между мишенями от центра (мишени — на ±2)
+		PendulumCalmPulse = 30, -- при этом пульсе и ниже — самый медленный маятник
+		PendulumTiredPulse = 90, -- при этом и выше — самый быстрый
+		PendulumPeriodCalm = 3.2, -- с, полный цикл туда-обратно
+		PendulumPeriodTired = 1.8,
+		-- вертикальная дрожь: по текущему пульсу (стоишь — пульс падает — дрожь стихает)
+		TremorBaseDeg = 0.08,
+		TremorDegPerPulse = 0.008, -- на единицу пульса выше PendulumCalmPulse
+		TremorFrequency = 1.3, -- Гц
 
 		-- задержка дыхания
 		HoldBreathDuration = 2,
 		HoldBreathCooldown = 4, -- с после окончания задержки
 		HoldBreathPulseCost = 10, -- пульс после задержки
-		HoldBreathSwayMultiplier = 0.1,
-
-		-- ветер: уровень 0–3, направление влево/вправо, на всю гонку для каждого стрельбища
-		WindMaxLevel = 3,
-		WindDegPerLevel = 0.6, -- смещение пули в градусах на уровень
+		HoldBreathSpeedMultiplier = 0.35, -- маятник во время задержки медленнее
+		HoldBreathTremorMultiplier = 0.15, -- и почти не дрожит
 
 		TargetOpenColor = Color3.fromRGB(20, 20, 20),
 		TargetClosedColor = Color3.fromRGB(255, 255, 255),
+
+		-- клиент: отклик выстрела (только визуал, на попадание не влияет)
+		RecoilDeg = 1.6, -- рывок камеры вверх при выстреле
+		RecoilReturnTime = 0.25, -- с, возврат после отдачи
+		RecoilFovKick = 2, -- градусов FOV на мгновение шире
+		MissShakeDeg = 0.35, -- встряска камеры при промахе
+		MissShakeTime = 0.22,
+		ShutterTime = 0.14, -- с, шторка падает на мишень
+		StreakShowTime = 1.3, -- с, сколько висит надпись серии
 
 		-- клиент
 		ImpactMarkSeconds = 4, -- сколько виден след пули на щите
 		ImpactMarkSize = 0.3,
 		ScopeFov = 15,
-		MouseSensitivity = 0.012, -- градусов на пиксель
-		TouchSensitivity = 0.02,
 	},
 
 	-- Толчок соперника (пати-хаос). Пульс не тратит.
