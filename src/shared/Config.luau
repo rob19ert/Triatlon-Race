@@ -10,8 +10,11 @@ local Config = {
 		StandingsInterval = 0.5, -- с, как часто пересчитывать и рассылать таблицу позиций
 		CountdownTime = 3, -- с, отсчёт перед стартом
 		DnfAfterWinner = 60, -- с после финиша победителя, потом DNF
+		StudioDnfAfterWinner = 300, -- в Studio (тест на нескольких клиентах) ждём дольше
 		MaxRaceTime = 7 * 60, -- с, страховка от бесконечной гонки
-		ResultsTime = 10, -- с, показ таблицы результатов
+		PodiumTime = 5, -- с, камера на подиуме перед таблицей
+		ResultsTime = 10, -- с, показ таблицы результатов (после подиума)
+		PhotoFinishGap = 0.1, -- с, разница с соседом меньше — «Фотофиниш!»
 	},
 
 	Movement = {
@@ -125,6 +128,13 @@ local Config = {
 		TumbleSpin = 8, -- рад/с, кувырок при падении (клиент)
 	},
 
+	-- Только Studio: помощники для тестов на нескольких клиентах
+	Dev = {
+		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы
+		ToFinishDistance = 10, -- стад до финишной линии
+		ToFinishSpacing = 4, -- стад между игроками по ширине
+	},
+
 	Penalty = {
 		LoopName = "PenaltyLoop", -- модели в Track с этим префиксом (атрибут Order = стрельбище): Near, Far (зоны круга), Check (проверка на трассе), Return (точка возврата)
 		LapsPerMiss = 1,
@@ -135,6 +145,8 @@ local Config = {
 		FolderName = "Track",
 		StartGridName = "StartGrid",
 		FinishZoneName = "FinishZone",
+		FinishLineName = "FinishLine", -- финиш = пересечение плоскости этой детали (время интерполируется между кадрами)
+		PodiumName = "Podium", -- модель: Spot1..Spot3 (куда ставить призёров), Camera (откуда смотреть)
 		GridSpacing = 4, -- стадов между игроками на старте
 		GridRowSize = 6, -- игроков в ряду
 

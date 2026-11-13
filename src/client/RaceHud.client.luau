@@ -9,11 +9,13 @@ local RunService = game:GetService("RunService")
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
 local Types = require(ReplicatedStorage.Shared:WaitForChild("Types"))
 local Attributes = require(ReplicatedStorage.Shared:WaitForChild("Attributes"))
+local Config = require(ReplicatedStorage.Shared:WaitForChild("Config"))
 
 local player = Players.LocalPlayer
 
 local current: Types.RaceStatePayload = { state = "Lobby", endsAt = 0, raceStartedAt = 0 }
 local myTime: number? = nil
+local resultsToken = 0 -- отменяет отложенный показ таблицы
 
 ---------------------------------------------------------------- UI
 
@@ -146,6 +148,7 @@ Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Typ
 	current = payload
 	if payload.state == "Lobby" or payload.state == "Countdown" then
 		myTime = nil
+		resultsToken += 1
 		resultsFrame.Visible = false
 	end
 end)
@@ -156,6 +159,7 @@ Remotes.get(Remotes.Names.PlayerFinished).OnClientEvent:Connect(function(entry: 
 	end
 end)
 
+-- Таблица появляется после показа подиума (камеру на подиум включает PodiumCamera).
 Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: { Types.ResultEntry })
 	local lines = { "РЕЗУЛЬТАТЫ", "" }
 	for _, entry in results do
@@ -163,11 +167,18 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: {
 		if entry.dnf then
 			table.insert(lines, string.format("DNF   %s%s", entry.name, accuracy))
 		else
-			table.insert(lines, string.format("%d.   %s   %s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), accuracy))
+			local photo = if entry.photoFinish then "   📸" else ""
+			table.insert(lines, string.format("%d.   %s   %s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), accuracy, photo))
 		end
 	end
 	resultsText.Text = table.concat(lines, "\n")
-	resultsFrame.Visible = true
+	resultsToken += 1
+	local token = resultsToken
+	task.delay(Config.Race.PodiumTime, function()
+		if token == resultsToken then
+			resultsFrame.Visible = true
+		end
+	end)
 end)
 
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)

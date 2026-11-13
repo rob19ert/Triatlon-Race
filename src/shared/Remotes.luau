@@ -24,6 +24,7 @@ local Remotes = {
 		FireShot = "FireShot", -- (aimYawDeg: number, aimPitchDeg: number, shotTime: number)
 		HoldBreath = "HoldBreath", -- ()
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
+		DevToFinish = "DevToFinish", -- () только Studio: перенести к финишной линии (тест на нескольких клиентах)
 	},
 }
 

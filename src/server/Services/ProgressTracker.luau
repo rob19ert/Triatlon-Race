@@ -2,7 +2,8 @@
 -- Прогресс игроков по трассе (всё на сервере, по позиции HumanoidRootPart, без Touched):
 --  * чекпоинты — начало каждого препятствия (тег Checkpoint, атрибут Order);
 --  * падение в зону FallZone или ниже KillY — возврат на последний чекпоинт;
---  * пересёк FinishZone — событие Finished.
+--  * пересёк плоскость FinishLine (внутри FinishZone) — событие Finished с точным временем:
+--    момент пересечения интерполируется между двумя кадрами (для фотофиниша).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -19,16 +20,20 @@ local ShootingService: any
 local PenaltyService: any
 
 local finishedEvent = Instance.new("BindableEvent")
--- (player: Player) — игрок пересёк финиш. Срабатывает один раз, потом игрок снимается с трекинга.
+-- (player: Player, finishClock: number) — игрок пересёк финиш (finishClock — os.clock() момента пересечения).
+-- Срабатывает один раз, потом игрок снимается с трекинга.
 ProgressTracker.Finished = finishedEvent.Event
 
 type PlayerProgress = {
 	checkpoint: BasePart?, -- nil = ещё не прошёл ни одного, возвращаем на старт
 	checkpointOrder: number,
+	lastLineDist: number?, -- расстояние до плоскости финиша в прошлом кадре (>0 — ещё не пересёк)
+	lastClock: number,
 }
 
 local tracked: { [Player]: PlayerProgress } = {}
 local finishZone: BasePart
+local finishLine: BasePart
 local startGrid: BasePart
 
 local function isInside(zone: BasePart, position: Vector3): boolean
@@ -90,17 +95,31 @@ local function updateCheckpoint(player: Player, progress: PlayerProgress, positi
 	end
 end
 
+-- Расстояние до плоскости финишной линии со стороны трассы (трасса идёт вдоль -Z: до линии > 0).
+local function lineDistance(position: Vector3): number
+	return finishLine.CFrame:PointToObjectSpace(position).Z
+end
+
 local function step()
+	local clock = os.clock()
 	for player, progress in tracked do
 		local root = getRoot(player)
 		if not root then
 			continue
 		end
 		local position = root.Position
+		local dist = lineDistance(position)
+		local prevDist, prevClock = progress.lastLineDist, progress.lastClock
+		progress.lastLineDist, progress.lastClock = dist, clock
 
-		if isInside(finishZone, position) then
+		if dist <= 0 and isInside(finishZone, position) then
+			-- доля кадра, на которой пересекли линию
+			local finishClock = clock
+			if prevDist and prevDist > 0 then
+				finishClock = prevClock + (clock - prevClock) * prevDist / (prevDist - dist)
+			end
 			tracked[player] = nil
-			finishedEvent:Fire(player)
+			finishedEvent:Fire(player, finishClock)
 			continue
 		end
 
@@ -128,7 +147,7 @@ end
 function ProgressTracker.beginTracking(players: { Player })
 	table.clear(tracked)
 	for _, player in players do
-		tracked[player] = { checkpoint = nil, checkpointOrder = 0 }
+		tracked[player] = { checkpoint = nil, checkpointOrder = 0, lastLineDist = nil, lastClock = 0 }
 	end
 end
 
@@ -175,6 +194,7 @@ function ProgressTracker.start()
 	local track = workspace:WaitForChild(Config.Track.FolderName)
 	finishZone = track:WaitForChild(Config.Track.FinishZoneName) :: BasePart
 	startGrid = track:WaitForChild(Config.Track.StartGridName) :: BasePart
+	finishLine = track:WaitForChild(Config.Track.FinishLineName) :: BasePart
 
 	local function hookPlayer(player: Player)
 		player.CharacterAdded:Connect(function(character)

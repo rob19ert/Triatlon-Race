@@ -18,6 +18,7 @@ export type ResultEntry = {
 	dnf: boolean,
 	hits: number?, -- попаданий за всю гонку (заполняется в итогах)
 	shots: number?,
+	photoFinish: boolean?, -- разница с соседом < PhotoFinishGap
 }
 
 export type RacePhase = "Run" | "Shooting" | "Penalty" | "Finished"

@@ -21,15 +21,18 @@ local StaminaService: any
 local ShootingService: any
 local PenaltyService: any
 local PushService: any
+local PodiumService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
 local playerFinishedRemote: RemoteEvent
 local standingsRemote: RemoteEvent
+local noticeRemote: RemoteEvent
 
 -- в Studio — тестовые значения лобби
 local MIN_PLAYERS = Config.Race.MinPlayers
 local LOBBY_WAIT = if RunService:IsStudio() then Config.Race.StudioLobbyWaitTime else Config.Race.LobbyWaitTime
+local DNF_AFTER_WINNER = if RunService:IsStudio() then Config.Race.StudioDnfAfterWinner else Config.Race.DnfAfterWinner
 
 local state: RaceState = "Lobby"
 local stateEndsAt = 0 -- workspace:GetServerTimeNow()
@@ -108,26 +111,54 @@ local function releaseAll()
 	end
 end
 
-local function onPlayerFinished(player: Player)
+-- Вставить финишера по точному времени (двое в одном кадре встанут в правильном порядке),
+-- пересчитать места и отметить фотофиниш с соседями.
+local function insertFinisher(entry: ResultEntry): boolean
+	local index = #finishers + 1
+	for i, other in finishers do
+		if (entry.time :: number) < (other.time :: number) then
+			index = i
+			break
+		end
+	end
+	table.insert(finishers, index, entry)
+	for i, e in finishers do
+		e.place = i
+	end
+	local photo = false
+	for _, neighbor in { finishers[index - 1], finishers[index + 1] } do
+		if neighbor and math.abs((neighbor.time :: number) - (entry.time :: number)) < Config.Race.PhotoFinishGap then
+			neighbor.photoFinish = true
+			entry.photoFinish = true
+			photo = true
+		end
+	end
+	return photo
+end
+
+local function onPlayerFinished(player: Player, finishClock: number)
 	if state ~= "Racing" or not participants[player] then
 		return
 	end
-	local elapsed = os.clock() - raceStartClock
+	local elapsed = finishClock - raceStartClock
 	local entry: ResultEntry = {
 		userId = player.UserId,
 		name = player.Name,
-		place = #finishers + 1,
+		place = 0,
 		time = elapsed,
 		dnf = false,
 	}
-	table.insert(finishers, entry)
-	log("%s finished #%d in %.2fs", player.Name, entry.place :: number, elapsed)
+	local photo = insertFinisher(entry)
+	log("%s finished #%d in %.3fs%s", player.Name, entry.place :: number, elapsed, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
+	if photo then
+		noticeRemote:FireAllClients("📸 Фотофиниш!")
+	end
 
 	if not winnerFinishClock then
 		winnerFinishClock = os.clock()
 		-- клиентам показываем таймер до DNF
-		stateEndsAt = now() + Config.Race.DnfAfterWinner
+		stateEndsAt = now() + DNF_AFTER_WINNER
 		raceStateRemote:FireAllClients(statePayload())
 	end
 end
@@ -308,7 +339,7 @@ local function runRacing()
 			log("All participants finished")
 			break
 		end
-		if winnerFinishClock and t - winnerFinishClock >= Config.Race.DnfAfterWinner then
+		if winnerFinishClock and t - winnerFinishClock >= DNF_AFTER_WINNER then
 			log("DNF timeout after winner")
 			break
 		end
@@ -350,12 +381,14 @@ local function runResults()
 		if entry.dnf then
 			log("  DNF  %s  shooting %s", entry.name, accuracy)
 		else
-			log("  #%d  %s  %.2fs  shooting %s", entry.place :: number, entry.name, entry.time :: number, accuracy)
+			log("  #%d  %s  %.3fs  shooting %s%s", entry.place :: number, entry.name, entry.time :: number, accuracy, if entry.photoFinish then "  PHOTO" else "")
 		end
 	end
+	PodiumService.show(results)
 	raceResultsRemote:FireAllClients(results)
-	setState("Results", Config.Race.ResultsTime)
-	task.wait(Config.Race.ResultsTime)
+	local duration = Config.Race.PodiumTime + Config.Race.ResultsTime
+	setState("Results", duration)
+	task.wait(duration)
 
 	-- вернуть всех в лобби
 	raceStartedAt = 0
@@ -391,10 +424,12 @@ function RaceManager.init(services: { [string]: any })
 	ShootingService = services.ShootingService
 	PenaltyService = services.PenaltyService
 	PushService = services.PushService
+	PodiumService = services.PodiumService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)
 	standingsRemote = Remotes.get(Remotes.Names.Standings)
+	noticeRemote = Remotes.get(Remotes.Names.Notice)
 end
 
 function RaceManager.start()
