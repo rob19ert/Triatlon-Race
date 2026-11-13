@@ -39,6 +39,8 @@ local Themes: { [string]: Theme } = {
 			Foliage2 = { color = rgb(130, 205, 70), material = Enum.Material.SmoothPlastic },
 			Trunk = { color = rgb(130, 85, 50), material = Enum.Material.Wood },
 			Rock = { color = rgb(160, 160, 170), material = Enum.Material.SmoothPlastic },
+			Structure = { color = rgb(235, 238, 245), material = Enum.Material.SmoothPlastic }, -- каркас трибун, вышек
+			Roof = { color = rgb(235, 70, 70), material = Enum.Material.SmoothPlastic }, -- крыши трибун и будок
 		},
 		lighting = {
 			clockTime = 13.5,
