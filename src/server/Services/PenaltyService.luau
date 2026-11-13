@@ -2,6 +2,8 @@
 -- Штрафные круги: за каждый промах — круг по штрафной петле.
 -- Круг = ближняя зона -> дальняя зона (за островом) -> ближняя зона; считает сервер.
 -- Пока штраф не отработан, зона Check на трассе возвращает игрока ко входу в петлю.
+-- Петель может быть несколько (PenaltyLoop, PenaltyLoop2 …, атрибут Order = Order стрельбища):
+-- штраф со стрельбы N отрабатывается на петле N.
 -- Над игроком висит счётчик «Штраф: 1/3», видимый всем.
 
 local Players = game:GetService("Players")
@@ -20,7 +22,15 @@ local ShootingService: any -- задаётся в init
 
 local COUNTER_NAME = "PenaltyCounter"
 
+type Loop = {
+	near: BasePart,
+	far: BasePart,
+	check: BasePart,
+	returnPoint: BasePart,
+}
+
 type PenaltyState = {
+	loop: Loop,
 	owed: number,
 	done: number,
 	reachedFar: boolean, -- половина круга пройдена
@@ -30,10 +40,7 @@ type PenaltyState = {
 local racers: { [Player]: boolean } = {}
 local states: { [Player]: PenaltyState } = {}
 
-local nearZone: BasePart
-local farZone: BasePart
-local checkZone: BasePart
-local returnPoint: BasePart
+local loops: { [number]: Loop } = {} -- по Order
 local noticeRemote: RemoteEvent
 
 local function log(fmt: string, ...: any)
@@ -103,15 +110,21 @@ end
 
 ---------------------------------------------------------------- логика
 
-local function onStageFinished(player: Player, _rangeOrder: number, _hits: number, misses: number)
+local function onStageFinished(player: Player, rangeOrder: number, _hits: number, misses: number)
 	if not racers[player] or misses <= 0 then
 		return
 	end
+	local loop = loops[rangeOrder] or loops[1]
+	if not loop then
+		warn(string.format("[PenaltyService] no penalty loop for range %d", rangeOrder))
+		return
+	end
 	local st = states[player]
-	if st then
-		st.owed += misses * P.LapsPerMiss -- на будущее: штраф со второй стрельбы добавляется
+	if st and st.loop == loop and st.done < st.owed then
+		st.owed += misses * P.LapsPerMiss
 	else
-		st = { owed = misses * P.LapsPerMiss, done = 0, reachedFar = false, lapStartedAt = os.clock() }
+		-- новая стрельба — новый счёт на своей петле
+		st = { loop = loop, owed = misses * P.LapsPerMiss, done = 0, reachedFar = false, lapStartedAt = os.clock() }
 		states[player] = st
 	end
 	publish(player, st)
@@ -124,7 +137,7 @@ local function sendBack(player: Player, st: PenaltyState)
 	if not character or not root then
 		return
 	end
-	local pos = returnPoint.Position + Vector3.new(0, Config.Track.RespawnHeight, 0)
+	local pos = st.loop.returnPoint.Position + Vector3.new(0, Config.Track.RespawnHeight, 0)
 	root.AssemblyLinearVelocity = Vector3.zero
 	character:PivotTo(CFrame.lookAt(pos, pos + Vector3.new(-1, 0, 0)))
 	noticeRemote:FireClient(player, string.format("Сначала штрафные круги: осталось %d", st.owed - st.done))
@@ -141,12 +154,13 @@ local function step()
 			continue
 		end
 		local pos = root.Position
+		local loop = st.loop
 
 		if not st.reachedFar then
-			if isInside(farZone, pos) then
+			if isInside(loop.far, pos) then
 				st.reachedFar = true
 			end
-		elseif isInside(nearZone, pos) then
+		elseif isInside(loop.near, pos) then
 			st.reachedFar = false
 			st.done += 1
 			log("%s lap %d/%d (%.1fs)", player.Name, st.done, st.owed, os.clock() - st.lapStartedAt)
@@ -157,7 +171,7 @@ local function step()
 			end
 		end
 
-		if st.done < st.owed and isInside(checkZone, pos) then
+		if st.done < st.owed and isInside(loop.check, pos) then
 			sendBack(player, st)
 		end
 	end
@@ -192,11 +206,26 @@ end
 
 function PenaltyService.start()
 	local track = workspace:WaitForChild(Config.Track.FolderName)
-	local loop = track:WaitForChild(P.LoopName)
-	nearZone = loop:WaitForChild("Near") :: BasePart
-	farZone = loop:WaitForChild("Far") :: BasePart
-	checkZone = loop:WaitForChild("Check") :: BasePart
-	returnPoint = loop:WaitForChild("Return") :: BasePart
+	track:WaitForChild(P.LoopName) -- хотя бы первая петля должна быть
+	for _, model in track:GetChildren() do
+		if model:IsA("Model") and string.sub(model.Name, 1, #P.LoopName) == P.LoopName then
+			local order = (model:GetAttribute("Order") :: number?) or 1
+			if loops[order] then
+				warn(string.format("[PenaltyService] duplicate penalty loop Order %d (%s)", order, model.Name))
+			end
+			loops[order] = {
+				near = model:WaitForChild("Near") :: BasePart,
+				far = model:WaitForChild("Far") :: BasePart,
+				check = model:WaitForChild("Check") :: BasePart,
+				returnPoint = model:WaitForChild("Return") :: BasePart,
+			}
+		end
+	end
+	local count = 0
+	for _ in loops do
+		count += 1
+	end
+	log("%d penalty loop(s) loaded", count)
 
 	ShootingService.StageFinished:Connect(onStageFinished)
 
