@@ -17,6 +17,7 @@ local Attributes = require(Shared:WaitForChild("Attributes"))
 local Aim = require(Shared:WaitForChild("Aim"))
 local Types = require(Shared:WaitForChild("Types"))
 local TouchButtons = require(script.Parent:WaitForChild("TouchButtons"))
+local Fx = require(script.Parent:WaitForChild("Fx"))
 
 local C = Config.Shooting
 local player = Players.LocalPlayer
@@ -414,6 +415,9 @@ Remotes.get(Remotes.Names.ShotResult).OnClientEvent:Connect(function(result: Typ
 	end
 	if result.impact then
 		showImpact(state, result.impact, result.hit)
+	end
+	if result.hit and result.impact then
+		Fx.burst("Confetti", result.impact)
 	end
 end)
 

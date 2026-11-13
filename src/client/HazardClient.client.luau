@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local HazardMotion = require(Shared:WaitForChild("HazardMotion"))
+local Fx = require(script.Parent:WaitForChild("Fx"))
 
 local H = Config.Hazards
 local player = Players.LocalPlayer
@@ -75,6 +76,8 @@ Remotes.get(Remotes.Names.KnockedDown).OnClientEvent:Connect(function(duration: 
 	end
 	knockToken += 1
 	local token = knockToken
+	Fx.play("Bonk")
+	Fx.burst("Dust", root.Position)
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics) -- без управления, падает как тело
 	local spin = H.TumbleSpin
 	root.AssemblyAngularVelocity = Vector3.new((math.random() - 0.5) * 2 * spin, 0, (math.random() - 0.5) * 2 * spin)
