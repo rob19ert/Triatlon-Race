@@ -1,0 +1,9 @@
+# Сборки Rojo и локальные копии плейса
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.lock
+
+sourcemap.json
+.DS_Store

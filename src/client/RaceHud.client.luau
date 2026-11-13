@@ -1,0 +1,129 @@
+--!strict
+-- Простой HUD гонки: статус/отсчёт/таймер сверху и таблица результатов.
+-- Только отображение — все цифры приходят с сервера.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
+local Types = require(ReplicatedStorage.Shared:WaitForChild("Types"))
+
+local player = Players.LocalPlayer
+
+local current: Types.RaceStatePayload = { state = "Lobby", endsAt = 0, raceStartedAt = 0 }
+local myTime: number? = nil
+
+---------------------------------------------------------------- UI
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "RaceHud"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = false
+
+local status = Instance.new("TextLabel")
+status.Name = "Status"
+status.AnchorPoint = Vector2.new(0.5, 0)
+status.Position = UDim2.new(0.5, 0, 0, 8)
+status.Size = UDim2.new(0.6, 0, 0, 48)
+status.BackgroundTransparency = 0.35
+status.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+status.TextColor3 = Color3.new(1, 1, 1)
+status.Font = Enum.Font.GothamBold
+status.TextScaled = true
+status.Text = ""
+status.Parent = gui
+Instance.new("UICorner", status)
+
+local resultsFrame = Instance.new("Frame")
+resultsFrame.Name = "Results"
+resultsFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+resultsFrame.Position = UDim2.fromScale(0.5, 0.5)
+resultsFrame.Size = UDim2.new(0.5, 0, 0.6, 0)
+resultsFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+resultsFrame.BackgroundTransparency = 0.2
+resultsFrame.Visible = false
+resultsFrame.Parent = gui
+Instance.new("UICorner", resultsFrame)
+local sizeLimit = Instance.new("UISizeConstraint")
+sizeLimit.MinSize = Vector2.new(280, 200)
+sizeLimit.Parent = resultsFrame
+
+local resultsText = Instance.new("TextLabel")
+resultsText.BackgroundTransparency = 1
+resultsText.Position = UDim2.fromOffset(16, 12)
+resultsText.Size = UDim2.new(1, -32, 1, -24)
+resultsText.TextColor3 = Color3.new(1, 1, 1)
+resultsText.Font = Enum.Font.GothamMedium
+resultsText.TextSize = 22
+resultsText.TextXAlignment = Enum.TextXAlignment.Left
+resultsText.TextYAlignment = Enum.TextYAlignment.Top
+resultsText.TextWrapped = true
+resultsText.Parent = resultsFrame
+
+gui.Parent = player:WaitForChild("PlayerGui")
+
+---------------------------------------------------------------- логика отображения
+
+local function formatTime(seconds: number): string
+	local m = math.floor(seconds / 60)
+	local s = seconds - m * 60
+	return string.format("%d:%05.2f", m, s)
+end
+
+local function remaining(): number
+	if current.endsAt == 0 then
+		return 0
+	end
+	return math.max(0, current.endsAt - workspace:GetServerTimeNow())
+end
+
+local function render()
+	local s = current.state
+	if s == "Lobby" then
+		if current.endsAt > 0 then
+			status.Text = string.format("Старт через %d", math.ceil(remaining()))
+		else
+			status.Text = "Ожидание игроков…"
+		end
+	elseif s == "Countdown" then
+		status.Text = tostring(math.max(1, math.ceil(remaining())))
+	elseif s == "Racing" then
+		if myTime then
+			status.Text = "Финиш! " .. formatTime(myTime)
+		else
+			status.Text = formatTime(workspace:GetServerTimeNow() - current.raceStartedAt)
+		end
+	elseif s == "Results" then
+		status.Text = string.format("Результаты • лобби через %d", math.ceil(remaining()))
+	end
+end
+
+Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Types.RaceStatePayload)
+	current = payload
+	if payload.state == "Lobby" or payload.state == "Countdown" then
+		myTime = nil
+		resultsFrame.Visible = false
+	end
+end)
+
+Remotes.get(Remotes.Names.PlayerFinished).OnClientEvent:Connect(function(entry: Types.ResultEntry)
+	if entry.userId == player.UserId then
+		myTime = entry.time
+	end
+end)
+
+Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: { Types.ResultEntry })
+	local lines = { "РЕЗУЛЬТАТЫ", "" }
+	for _, entry in results do
+		if entry.dnf then
+			table.insert(lines, string.format("DNF   %s", entry.name))
+		else
+			table.insert(lines, string.format("%d.   %s   %s", entry.place :: number, entry.name, formatTime(entry.time :: number)))
+		end
+	end
+	resultsText.Text = table.concat(lines, "\n")
+	resultsFrame.Visible = true
+end)
+
+RunService.RenderStepped:Connect(render)
