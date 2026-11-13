@@ -22,6 +22,12 @@ local Config = {
 		FinishZoneName = "FinishZone",
 		GridSpacing = 4, -- стадов между игроками на старте
 		GridRowSize = 6, -- игроков в ряду
+
+		-- препятствия
+		CheckpointTag = "Checkpoint", -- CollectionService-тег зоны начала препятствия (атрибут Order)
+		FallZoneTag = "FallZone", -- тег зоны падения (вода и т.п.)
+		KillY = -20, -- ниже этой высоты — тоже падение
+		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока
 	},
 }
 
