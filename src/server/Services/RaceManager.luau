@@ -206,10 +206,23 @@ end
 
 ---------------------------------------------------------------- этапы
 
+-- Игроки, у которых уже загружен персонаж (только их можно поставить на старт).
+-- Персонаж может грузиться дольше таймера лобби (медленная выдача ассетов), поэтому
+-- считаем готовых, а не всех подключившихся.
+local function countReady(): number
+	local n = 0
+	for _, player in Players:GetPlayers() do
+		if getRoot(player) then
+			n += 1
+		end
+	end
+	return n
+end
+
 local function runLobby()
 	while true do
 		setState("Lobby")
-		while #Players:GetPlayers() < MIN_PLAYERS do
+		while countReady() < MIN_PLAYERS do
 			task.wait(0.5)
 		end
 
@@ -218,6 +231,7 @@ local function runLobby()
 		local enough = true
 		while os.clock() < deadline do
 			task.wait(0.25)
+			-- тут считаем подключённых: респаун одного игрока не должен сбрасывать таймер всем
 			local count = #Players:GetPlayers()
 			if count < MIN_PLAYERS then
 				enough = false
@@ -251,6 +265,7 @@ local function runCountdown(): boolean
 		end
 	end
 	if #list == 0 then
+		log("No loaded characters at start — back to lobby")
 		return false
 	end
 

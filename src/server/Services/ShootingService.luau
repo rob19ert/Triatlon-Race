@@ -59,7 +59,7 @@ type Session = {
 export type StageResult = { hits: number, misses: number }
 
 local ranges: { Range } = {}
-local racers: { [Player]: boolean } = {}
+local racers: { [Player]: number } = {} -- игрок -> стартовый номер (определяет «свой» рубеж)
 local sessions: { [Player]: Session } = {}
 local laneOccupant: { [Lane]: Player } = {}
 local results: { [Player]: { [number]: StageResult } } = {} -- по Order стрельбища
@@ -122,6 +122,17 @@ local function loadRange(model: Model): Range?
 	table.sort(lanes, function(a, b)
 		return a.index < b.index
 	end)
+	-- проверка мира: скопированные рубежи часто остаются с тем же Index или на том же месте
+	for i = 2, #lanes do
+		for j = 1, i - 1 do
+			if lanes[i].index == lanes[j].index then
+				warn(string.format("[ShootingService] %s: duplicate lane Index %d", model.Name, lanes[i].index))
+			end
+			if (lanes[i].eye.Position - lanes[j].eye.Position).Magnitude < 1 then
+				warn(string.format("[ShootingService] %s: lanes %d and %d have Eye at the same spot", model.Name, lanes[j].index, lanes[i].index))
+			end
+		end
+	end
 
 	local stance = model:GetAttribute("Stance")
 	return {
@@ -154,11 +165,15 @@ local function setWindLabel(range: Range)
 	end
 end
 
+local function resetLaneTargets(lane: Lane)
+	for _, target in lane.targets do
+		target.Color = C.TargetOpenColor
+	end
+end
+
 local function resetRange(range: Range)
 	for _, lane in range.lanes do
-		for _, target in lane.targets do
-			target.Color = C.TargetOpenColor
-		end
+		resetLaneTargets(lane)
 	end
 	local level = math.random(0, C.WindMaxLevel)
 	range.wind = if math.random() < 0.5 then -level else level
@@ -186,14 +201,27 @@ local function nearestFreeLane(range: Range, position: Vector3): Lane?
 	return best
 end
 
+-- Свой рубеж по стартовому номеру (как в биатлоне); если занят — ближайший свободный.
+local function pickLane(player: Player, range: Range, position: Vector3): Lane?
+	local slot = racers[player]
+	if slot and #range.lanes > 0 then
+		local own = range.lanes[(slot - 1) % #range.lanes + 1]
+		if not laneOccupant[own] then
+			return own
+		end
+	end
+	return nearestFreeLane(range, position)
+end
+
 local function startSession(player: Player, range: Range, root: BasePart)
-	local lane = nearestFreeLane(range, root.Position)
+	local lane = pickLane(player, range, root.Position)
 	if not lane then
 		return -- все рубежи заняты: игрок ждёт в зоне, попробуем в следующем кадре
 	end
 	local character = player.Character :: Model
 
 	laneOccupant[lane] = player
+	resetLaneTargets(lane) -- после предыдущего стрелка мишени могли остаться закрытыми
 	local session: Session = {
 		range = range,
 		lane = lane,
@@ -405,8 +433,8 @@ end
 
 function ShootingService.beginRace(players: { Player })
 	ShootingService.endRace()
-	for _, player in players do
-		racers[player] = true
+	for slot, player in players do
+		racers[player] = slot
 	end
 	for _, range in ranges do
 		resetRange(range)
