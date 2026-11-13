@@ -181,7 +181,7 @@ local function updatePenaltyLabel()
 	local owed = player:GetAttribute(Attributes.PenaltyOwed)
 	local done = player:GetAttribute(Attributes.PenaltyDone)
 	if typeof(owed) == "number" and typeof(done) == "number" and done < owed then
-		penaltyLabel.Text = string.format("Штрафной круг %d/%d — беги вокруг красного острова слева", done + 1, owed)
+		penaltyLabel.Text = string.format("Штрафной круг %d/%d — на развилке налево, вокруг красного острова", done + 1, owed)
 		penaltyLabel.Visible = true
 	else
 		penaltyLabel.Visible = false
