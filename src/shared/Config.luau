@@ -53,9 +53,7 @@ local Config = {
 		CheckpointTag = "Checkpoint", -- CollectionService-тег зоны начала препятствия (атрибут Order)
 		FallZoneTag = "FallZone", -- тег зоны падения (вода и т.п.)
 		KillY = -20, -- ниже этой высоты — тоже падение
-		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока
-		FallRespawnDelay = 0.5, -- с между падением и возвратом на чекпоинт
-	},
+		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока	},
 }
 
 return Config

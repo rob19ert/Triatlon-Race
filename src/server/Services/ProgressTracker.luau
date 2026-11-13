@@ -20,7 +20,6 @@ ProgressTracker.Finished = finishedEvent.Event
 type PlayerProgress = {
 	checkpoint: BasePart?, -- nil = ещё не прошёл ни одного, возвращаем на старт
 	checkpointOrder: number,
-	respawning: boolean, -- уже упал, ждём FallRespawnDelay
 }
 
 local tracked: { [Player]: PlayerProgress } = {}
@@ -102,15 +101,9 @@ local function step()
 
 		updateCheckpoint(player, progress, position)
 
-		if not progress.respawning and inAnyFallZone(position) then
-			progress.respawning = true
+		if inAnyFallZone(position) then
 			print(string.format("[ProgressTracker] %s fell -> checkpoint %d", player.Name, progress.checkpointOrder))
-			task.delay(Config.Track.FallRespawnDelay, function()
-				if tracked[player] == progress then
-					returnToCheckpoint(player, progress)
-				end
-				progress.respawning = false
-			end)
+			returnToCheckpoint(player, progress)
 		end
 	end
 end
@@ -130,7 +123,7 @@ end
 function ProgressTracker.beginTracking(players: { Player })
 	table.clear(tracked)
 	for _, player in players do
-		tracked[player] = { checkpoint = nil, checkpointOrder = 0, respawning = false }
+		tracked[player] = { checkpoint = nil, checkpointOrder = 0 }
 	end
 end
 
