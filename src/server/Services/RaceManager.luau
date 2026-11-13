@@ -14,7 +14,9 @@ type ResultEntry = Types.ResultEntry
 
 local RaceManager = {}
 
-local ProgressTracker: any -- задаётся в init
+-- задаются в init
+local ProgressTracker: any
+local StaminaService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -193,6 +195,7 @@ local function runRacing()
 		table.insert(list, player)
 	end
 	ProgressTracker.beginTracking(list)
+	StaminaService.beginRace(list)
 	releaseAll()
 	setState("Racing", Config.Race.MaxRaceTime)
 	log("GO! %d participant(s)", #list)
@@ -214,6 +217,7 @@ local function runRacing()
 		end
 	end
 	ProgressTracker.reset()
+	StaminaService.endRace()
 end
 
 local function buildResults(): { ResultEntry }
@@ -270,6 +274,7 @@ end
 
 function RaceManager.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
+	StaminaService = services.StaminaService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)

@@ -12,6 +12,9 @@ local Remotes = {
 		RaceState = "RaceState", -- Types.RaceStatePayload
 		RaceResults = "RaceResults", -- {Types.ResultEntry}
 		PlayerFinished = "PlayerFinished", -- Types.ResultEntry
+
+		-- клиент -> сервер (намерения, сервер проверяет)
+		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)
 	},
 }
 
