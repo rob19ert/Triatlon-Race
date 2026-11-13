@@ -128,6 +128,12 @@ local Config = {
 		TumbleSpin = 8, -- рад/с, кувырок при падении (клиент)
 	},
 
+	-- Режим зрителя (финишировал или зашёл посреди гонки)
+	Spectator = {
+		PrevKey = Enum.KeyCode.Left,
+		NextKey = Enum.KeyCode.Right,
+	},
+
 	-- Только Studio: помощники для тестов на нескольких клиентах
 	Dev = {
 		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы

@@ -22,6 +22,7 @@ local ShootingService: any
 local PenaltyService: any
 local PushService: any
 local PodiumService: any
+local SpectatorService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -350,6 +351,7 @@ local function runRacing()
 	end
 	publishStandings() -- финальный порядок
 	PushService.endRace()
+	SpectatorService.reset()
 	ProgressTracker.reset()
 	StaminaService.endRace()
 end
@@ -425,6 +427,7 @@ function RaceManager.init(services: { [string]: any })
 	PenaltyService = services.PenaltyService
 	PushService = services.PushService
 	PodiumService = services.PodiumService
+	SpectatorService = services.SpectatorService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)

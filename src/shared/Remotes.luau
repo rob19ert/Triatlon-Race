@@ -24,6 +24,7 @@ local Remotes = {
 		FireShot = "FireShot", -- (aimYawDeg: number, aimPitchDeg: number, shotTime: number)
 		HoldBreath = "HoldBreath", -- ()
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
+		SpectateFocus = "SpectateFocus", -- (targetUserId: number) зритель смотрит за этим гонщиком; 0 — ни за кем
 		DevToFinish = "DevToFinish", -- () только Studio: перенести к финишной линии (тест на нескольких клиентах)
 	},
 }
