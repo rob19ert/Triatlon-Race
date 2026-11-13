@@ -2,20 +2,18 @@
 -- Толчок: игрок жмёт F / тач-кнопку, сервер ищет ближайшего соперника в конусе впереди
 -- и толкает его в сторону от толкающего и чуть вверх.
 -- Нельзя толкать и быть толкнутым на рубеже, в штрафной петле и на финишной прямой.
--- Импульс — LinearVelocity в корне соперника на Duration секунд: констрейнт создаёт сервер,
--- физику персонажа считает его владелец-клиент, поэтому просто AssemblyLinearVelocity не сработал бы.
+-- Импульс — общий модуль Lib/Knockback.
 
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local Knockback = require(script.Parent.Parent.Lib.Knockback)
 
 local C = Config.Push
 local CONE_COS = math.cos(math.rad(C.ConeAngleDeg))
-local IMPULSE_NAME = "PushImpulse"
 
 local PushService = {}
 
@@ -103,23 +101,6 @@ local function findTarget(pusher: Player, root: BasePart): (Player?, BasePart?)
 	return best, bestRoot
 end
 
-local function applyImpulse(targetRoot: BasePart, direction: Vector3)
-	local old = targetRoot:FindFirstChild(IMPULSE_NAME)
-	if old then
-		old:Destroy()
-	end
-	local attachment = Instance.new("Attachment")
-	attachment.Name = IMPULSE_NAME
-	local velocity = Instance.new("LinearVelocity")
-	velocity.Attachment0 = attachment
-	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	velocity.MaxForce = C.MaxForce
-	velocity.VectorVelocity = direction * C.Speed + Vector3.new(0, C.UpSpeed, 0)
-	velocity.Parent = attachment
-	attachment.Parent = targetRoot
-	Debris:AddItem(attachment, C.Duration)
-end
-
 local function onPushIntent(player: Player)
 	if RaceManager.getState() ~= "Racing" then
 		return
@@ -144,7 +125,7 @@ local function onPushIntent(player: Player)
 	end
 
 	local away = (targetRoot.Position - root.Position) * Vector3.new(1, 0, 1)
-	applyImpulse(targetRoot, away.Unit)
+	Knockback.apply(targetRoot, away, C.Speed, C.UpSpeed, C.Duration)
 	setReadyAt(player, t + C.Cooldown)
 	noticeRemote:FireClient(target, string.format("%s толкнул тебя!", player.DisplayName))
 	log("%s pushed %s", player.Name, target.Name)

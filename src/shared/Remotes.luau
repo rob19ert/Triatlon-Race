@@ -17,6 +17,7 @@ local Remotes = {
 		ShootingFinished = "ShootingFinished", -- Types.ShootingSummary (всем, лента событий)
 		Notice = "Notice", -- (text: string) короткое сообщение игроку в ленту событий
 		Standings = "Standings", -- {Types.StandingEntry} таблица позиций во время гонки
+		KnockedDown = "KnockedDown", -- (duration: number) сбили препятствием — упасть и встать (только сбитому)
 
 		-- клиент -> сервер (намерения, сервер проверяет)
 		SprintIntent = "SprintIntent", -- (wantsSprint: boolean)
