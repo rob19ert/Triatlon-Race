@@ -73,7 +73,25 @@ local function findHit(position: Vector3, t: number): Vector3?
 	return nil
 end
 
+-- Шлагбаум: невидимая стенка твёрдая, пока переезд закрыт по расписанию (у всех одинаково).
+local function updateBarriers(now: number)
+	for _, wall in CollectionService:GetTagged(H.BarrierTag) do
+		if wall:IsA("BasePart") then
+			local closed = HazardMotion.isClosed(
+				(wall:GetAttribute("Period") :: number?) or 18,
+				(wall:GetAttribute("ClosedFrom") :: number?) or 0,
+				(wall:GetAttribute("ClosedTo") :: number?) or 0,
+				now
+			)
+			if wall.CanCollide ~= closed then
+				wall.CanCollide = closed
+			end
+		end
+	end
+end
+
 local function step()
+	updateBarriers(workspace:GetServerTimeNow())
 	if RaceManager.getState() ~= "Racing" or #hazards == 0 then
 		return
 	end
@@ -121,6 +139,8 @@ end
 function HazardService.start()
 	loadTagged(H.PendulumTag, "Pendulum")
 	loadTagged(H.WindmillTag, "Windmill")
+	loadTagged(H.TrainTag, "Shuttle")
+	loadTagged(H.GateTag, "Gate")
 	log("%d hazard(s) loaded", #hazards)
 
 	Players.PlayerRemoving:Connect(function(player)

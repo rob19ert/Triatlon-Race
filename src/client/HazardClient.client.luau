@@ -51,10 +51,33 @@ end
 
 watch(H.PendulumTag, "Pendulum")
 watch(H.WindmillTag, "Windmill")
+watch(H.TrainTag, "Shuttle")
+watch(H.GateTag, "Gate")
+
+-- мигающие фонари переезда: пока закрыто — попеременно красные
+local LIGHT_ON = Color3.fromRGB(255, 40, 40)
+local LIGHT_OFF = Color3.fromRGB(70, 20, 20)
+local function updateLights(t: number)
+	local blink = math.floor(t * 3) % 2 == 0
+	for _, light in CollectionService:GetTagged(H.RailLightTag) do
+		if light:IsA("BasePart") then
+			local closed = HazardMotion.isClosed(
+				(light:GetAttribute("Period") :: number?) or 18,
+				(light:GetAttribute("ClosedFrom") :: number?) or 0,
+				(light:GetAttribute("ClosedTo") :: number?) or 0,
+				t
+			)
+			local on = closed and (blink == ((light:GetAttribute("Side") :: number?) == 1))
+			light.Color = if on then LIGHT_ON else LIGHT_OFF
+			light.Material = if on then Enum.Material.Neon else Enum.Material.SmoothPlastic
+		end
+	end
+end
 
 -- PreSimulation: детали на месте до шага физики (Heartbeat идёт и без фокуса окна)
 RunService.PreSimulation:Connect(function()
 	local t = workspace:GetServerTimeNow()
+	updateLights(t)
 	for _, h in hazards do
 		local angle = HazardMotion.angleAt(h, t)
 		for _, mp in h.parts do

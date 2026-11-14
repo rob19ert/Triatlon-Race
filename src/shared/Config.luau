@@ -134,6 +134,10 @@ local Config = {
 	Hazards = {
 		PendulumTag = "Pendulum", -- модель: Pivot (ось, не двигается) + качающиеся части
 		WindmillTag = "Windmill", -- модель: Pivot (ступица) + лопасти
+		TrainTag = "Train", -- поезд-челнок по расписанию (атрибуты Period, Delay, Distance, Speed)
+		GateTag = "RailGate", -- шлагбаум (атрибуты Period, ClosedFrom, ClosedTo)
+		BarrierTag = "RailBarrier", -- невидимая стенка у шлагбаума: твёрдая, пока закрыто (сервер)
+		RailLightTag = "RailLight", -- мигающий фонарь переезда (клиент; те же атрибуты расписания)
 		HitsAttribute = "Hits", -- true у частей, которые сбивают (груз, лопасти)
 		PivotName = "Pivot",
 
