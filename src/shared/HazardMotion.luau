@@ -9,6 +9,8 @@
 --  * Shuttle  — поезд/бочка/овца: раз в Period секунд, начиная с Delay, едет вперёд (−Z Pivot) на Distance
 --               со скоростью Speed, остальное время стоит в начале (спрятан в депо/сарае);
 --               RollRadius > 0 — ещё и катится (поворот вокруг оси X Pivot);
+--               Loop = true — идёт без остановок по кругу пути (дошёл до конца — снова с начала,
+--               оба конца спрятаны в сарае/стоге); Delay тогда — сдвиг по времени для потока;
 --  * Gate     — шлагбаум: опущен (поворот на −90° вокруг Z Pivot), пока по расписанию закрыто
 --               (Period, ClosedFrom, ClosedTo — секунды внутри периода).
 
@@ -40,6 +42,7 @@ export type Hazard = {
 	distance: number, -- стад
 	speed: number, -- стад/с
 	rollRadius: number, -- > 0 — катится
+	loop: boolean, -- непрерывный поток
 	-- шлагбаум
 	closedFrom: number,
 	closedTo: number,
@@ -86,6 +89,7 @@ function HazardMotion.load(model: Model, kind: Kind): Hazard?
 		distance = numberAttr(model, "Distance", 0),
 		speed = numberAttr(model, "Speed", 40),
 		rollRadius = numberAttr(model, "RollRadius", 0),
+		loop = model:GetAttribute("Loop") == true,
 		closedFrom = numberAttr(model, "ClosedFrom", 0),
 		closedTo = numberAttr(model, "ClosedTo", 0),
 	}
@@ -101,6 +105,10 @@ end
 function HazardMotion.angleAt(h: Hazard, t: number): number
 	if h.kind == "Pendulum" then
 		return h.amplitude * math.sin(2 * math.pi * (t / h.period + h.phase))
+	elseif h.kind == "Shuttle" and h.loop then
+		-- остаток держит число небольшим; distance > 0
+		local cycle = h.distance / h.speed
+		return ((t + h.delay) % cycle) * h.speed
 	elseif h.kind == "Shuttle" then
 		local local_ = (t % h.period) - h.delay
 		if local_ <= 0 then
