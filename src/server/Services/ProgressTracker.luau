@@ -49,12 +49,17 @@ local function getRoot(player: Player): BasePart?
 	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- Точка возврата: низ зоны чекпоинта (или стартовой решётки) + RespawnHeight, лицом к финишу (-Z).
+-- Точка возврата: низ зоны чекпоинта (или стартовой решётки) + RespawnHeight,
+-- лицом по направлению зоны (LookVector чекпоинта = направление движения).
 local function respawnCFrame(progress: PlayerProgress): CFrame
 	local zone = progress.checkpoint or startGrid
 	local floor = zone.Position - Vector3.new(0, zone.Size.Y / 2, 0)
 	local pos = floor + Vector3.new(0, Config.Track.RespawnHeight, 0)
-	return CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1))
+	local look = if progress.checkpoint then zone.CFrame.LookVector * Vector3.new(1, 0, 1) else Vector3.new(0, 0, -1)
+	if look.Magnitude < 1e-3 then
+		look = Vector3.new(0, 0, -1)
+	end
+	return CFrame.lookAt(pos, pos + look.Unit)
 end
 
 local function returnToCheckpoint(player: Player, progress: PlayerProgress)

@@ -25,6 +25,8 @@ type PlayerStamina = {
 	recoveryMultiplier: number, -- догонялка: >1 у отстающих
 	turboUntil: number, -- os.clock() конца турбо (5/5 на рубеже)
 	speedOverride: number?, -- базовая скорость вместо бега (велосипед; в Studio — режим велосипеда)
+	boostUntil: number, -- os.clock() конца ускорителя
+	boostMultiplier: number,
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -127,6 +129,9 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if os.clock() < st.turboUntil then
 		speed *= Config.Reward.TurboSpeedMultiplier
 	end
+	if os.clock() < st.boostUntil then
+		speed *= st.boostMultiplier
+	end
 	if humanoid.WalkSpeed ~= speed then
 		humanoid.WalkSpeed = speed
 	end
@@ -170,6 +175,8 @@ function StaminaService.beginRace(players: { Player })
 			ignoreRedZonePenalty = false,
 			recoveryMultiplier = 1,
 			turboUntil = 0,
+			boostUntil = 0,
+			boostMultiplier = 1,
 			lastVelY = 0,
 			publishedPulse = nil,
 		}
@@ -213,6 +220,15 @@ end
 function StaminaService.getSpeedOverride(player: Player): number?
 	local st = active[player]
 	return st and st.speedOverride
+end
+
+-- Ускоритель на дороге: скорость ×multiplier на seconds (продлевается при повторном заезде).
+function StaminaService.grantBoost(player: Player, multiplier: number, seconds: number)
+	local st = active[player]
+	if st then
+		st.boostUntil = os.clock() + seconds
+		st.boostMultiplier = multiplier
+	end
 end
 
 -- Турбо: скорость ×TurboSpeedMultiplier на seconds секунд (награда за 5/5).
