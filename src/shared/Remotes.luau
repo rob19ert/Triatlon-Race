@@ -17,6 +17,7 @@ local Remotes = {
 		ShootingFinished = "ShootingFinished", -- Types.ShootingSummary (всем, лента событий)
 		Notice = "Notice", -- (text: string) короткое сообщение игроку в ленту событий
 		Standings = "Standings", -- {Types.StandingEntry} таблица позиций во время гонки
+		PushFx = "PushFx", -- (pusherUserId: number, targetUserId: number) анимация толчка у всех; target 0 — мимо
 		KnockedDown = "KnockedDown", -- (duration: number) сбили препятствием — упасть и встать (только сбитому)
 
 		-- клиент -> сервер (намерения, сервер проверяет)

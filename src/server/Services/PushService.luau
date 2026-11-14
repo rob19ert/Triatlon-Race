@@ -1,7 +1,8 @@
 --!strict
 -- Толчок: игрок жмёт F / тач-кнопку, сервер ищет ближайшего соперника в конусе впереди
 -- и толкает его в сторону от толкающего и чуть вверх.
--- Нельзя толкать и быть толкнутым на рубеже и на финишной прямой.
+-- Соперник отлетает и падает на KnockdownTime. Нельзя толкать и быть толкнутым на рубеже
+-- после толчка цель TargetImmunity секунд неуязвима (против спама). На финишной прямой — можно.
 -- Импульс — общий модуль Lib/Knockback.
 
 local Players = game:GetService("Players")
@@ -22,9 +23,12 @@ local RaceManager: any
 local ProgressTracker: any
 local ShootingService: any
 local noticeRemote: RemoteEvent
+local pushFxRemote: RemoteEvent
+local knockedRemote: RemoteEvent
 
 local racers: { [Player]: boolean } = {}
 local readyAt: { [Player]: number } = {}
+local immuneUntil: { [Player]: number } = {}
 
 local function log(fmt: string, ...: any)
 	print("[PushService] " .. string.format(fmt, ...))
@@ -46,7 +50,7 @@ local function getRoot(player: Player): BasePart?
 	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- Игрок на трассе и не в защищённой зоне (рубеж, финишная прямая).
+-- Игрок на трассе (не финишировал) и не на рубеже.
 local function canPushOrBePushed(player: Player): boolean
 	if not racers[player] or not ProgressTracker.isTracked(player) then
 		return false
@@ -54,12 +58,7 @@ local function canPushOrBePushed(player: Player): boolean
 	if ShootingService.isShooting(player) then
 		return false
 	end
-	-- все стрельбы позади = финишная прямая
-	local rangeCount = ShootingService.getRangeCount()
-	if rangeCount > 0 and ShootingService.getCompletedStages(player) >= rangeCount then
-		return false
-	end
-	return true
+	return true -- на финишной прямой толкаться можно (решено 14.11.2026)
 end
 
 local function setReadyAt(player: Player, t: number?)
@@ -67,7 +66,7 @@ local function setReadyAt(player: Player, t: number?)
 	player:SetAttribute(Attributes.PushReadyAt, t)
 end
 
--- Ближайший соперник в конусе впереди.
+-- Ближайший соперник впереди или сбоку (конус ±ConeAngleDeg).
 local function findTarget(pusher: Player, root: BasePart): (Player?, BasePart?)
 	local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
 	if look.Magnitude < 1e-3 then
@@ -77,7 +76,7 @@ local function findTarget(pusher: Player, root: BasePart): (Player?, BasePart?)
 
 	local best: Player?, bestRoot: BasePart?, bestDist = nil, nil, math.huge
 	for other in racers do
-		if other == pusher or not canPushOrBePushed(other) then
+		if other == pusher or not canPushOrBePushed(other) or now() < (immuneUntil[other] or 0) then
 			continue
 		end
 		local otherRoot = getRoot(other)
@@ -117,12 +116,16 @@ local function onPushIntent(player: Player)
 	local target, targetRoot = findTarget(player, root)
 	if not target or not targetRoot then
 		setReadyAt(player, t + C.MissCooldown)
+		pushFxRemote:FireAllClients(player.UserId, 0) -- руки вперёд и мимо
 		return
 	end
 
 	local away = (targetRoot.Position - root.Position) * Vector3.new(1, 0, 1)
 	Knockback.apply(targetRoot, away, C.Speed, C.UpSpeed, C.Duration)
+	knockedRemote:FireClient(target, C.KnockdownTime)
+	immuneUntil[target] = t + C.TargetImmunity
 	setReadyAt(player, t + C.Cooldown)
+	pushFxRemote:FireAllClients(player.UserId, target.UserId)
 	noticeRemote:FireClient(target, string.format("%s толкнул тебя!", player.DisplayName))
 	log("%s pushed %s", player.Name, target.Name)
 end
@@ -148,6 +151,8 @@ function PushService.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
 	noticeRemote = Remotes.get(Remotes.Names.Notice)
+	pushFxRemote = Remotes.get(Remotes.Names.PushFx)
+	knockedRemote = Remotes.get(Remotes.Names.KnockedDown)
 end
 
 function PushService.start()
@@ -155,6 +160,7 @@ function PushService.start()
 	Players.PlayerRemoving:Connect(function(player)
 		racers[player] = nil
 		readyAt[player] = nil
+		immuneUntil[player] = nil
 	end)
 end
 
