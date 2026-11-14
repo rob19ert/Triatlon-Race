@@ -261,6 +261,13 @@ Remotes.get(Remotes.Names.PlayerFinished).OnClientEvent:Connect(function(entry: 
 	end
 end)
 
+-- чистая стрельба — на табло
+Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)
+	if summary.hits == summary.shots then
+		showEvent(string.format("🎯 %s — ЧИСТО %d/%d!", summary.name, summary.hits, summary.shots), GOLD)
+	end
+end)
+
 Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(list: { Types.ResultEntry })
 	results = list
 	local winner = list[1]

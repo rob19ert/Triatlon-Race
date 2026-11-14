@@ -9,5 +9,7 @@ return {
 	HoldBreathUntil = "HoldBreathUntil", -- number, server time конца задержки дыхания
 	HoldBreathReadyAt = "HoldBreathReadyAt", -- number, server time, когда можно снова
 	PenaltyTime = "PenaltyTime", -- number, накопленное штрафное время за гонку, с (nil — не в гонке)
+	RangeOrder = "RangeOrder", -- number, на каком стрельбище сейчас стреляет (nil — не стреляет)
+	RangeMarks = "RangeMarks", -- string, выстрелы этой стрельбы: "H" попал, "M" промах (напр. "HHM")
 	PushReadyAt = "PushReadyAt", -- number, server time, когда снова можно толкать (nil — толчок недоступен, не в гонке)
 }

@@ -234,6 +234,9 @@ local function startSession(player: Player, range: Range, root: BasePart)
 		finishing = false,
 	}
 	sessions[player] = session
+	-- соперники видят, кто стреляет и сколько закрыл
+	player:SetAttribute(Attributes.RangeOrder, range.order)
+	player:SetAttribute(Attributes.RangeMarks, "")
 
 	-- ставим на рубеж лицом к мишеням и фиксируем
 	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
@@ -269,6 +272,8 @@ local function endSession(player: Player, session: Session)
 		laneOccupant[session.lane] = nil
 	end
 	setHoldAttributes(player, nil)
+	player:SetAttribute(Attributes.RangeOrder, nil)
+	player:SetAttribute(Attributes.RangeMarks, nil)
 	local root = getRoot(player)
 	if root then
 		root.Anchored = false
@@ -381,6 +386,7 @@ local function onFireShot(player: Player, shotTime: unknown)
 		impact = if firstTarget then rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
 	}
 	remoteShotResult:FireClient(player, result)
+	player:SetAttribute(Attributes.RangeMarks, (player:GetAttribute(Attributes.RangeMarks) or "") .. (if hitIndex then "H" else "M"))
 	if not hitIndex then
 		shotMissedEvent:Fire(player)
 	end

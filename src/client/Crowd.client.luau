@@ -136,6 +136,9 @@ CollectionService:GetInstanceRemovedSignal(C.RowTag):Connect(clearRow)
 
 local raceState: Types.RaceState = "Lobby"
 local cheerAllUntil = 0
+-- локальные вспышки ликования (например, трибуна у стрельбища после чистой стрельбы)
+type CheerZone = { position: Vector3, radius: number, untilAt: number }
+local cheerZones: { CheerZone } = {}
 
 Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Types.RaceStatePayload)
 	if payload.state == "Racing" and raceState ~= "Racing" then
@@ -145,6 +148,19 @@ Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Typ
 end)
 Remotes.get(Remotes.Names.PlayerFinished).OnClientEvent:Connect(function()
 	cheerAllUntil = os.clock() + C.CheerOnFinishTime
+end)
+
+-- чистая стрельба: ликуют трибуны вокруг стрелка
+Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)
+	if summary.hits < summary.shots then
+		return
+	end
+	local shooter = Players:GetPlayerByUserId(summary.userId)
+	local character = shooter and shooter.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root then
+		table.insert(cheerZones, { position = root.Position, radius = C.CleanShootingRadius, untilAt = os.clock() + C.CheerOnFinishTime })
+	end
 end)
 
 local function racerPositions(): { Vector3 }
@@ -163,16 +179,27 @@ local function racerPositions(): { Vector3 }
 end
 
 local function updateTargets()
-	local all = os.clock() < cheerAllUntil
+	local now = os.clock()
+	local all = now < cheerAllUntil
+	for i = #cheerZones, 1, -1 do
+		if now > cheerZones[i].untilAt then
+			table.remove(cheerZones, i)
+		end
+	end
 	local racers = racerPositions()
 	local r2 = C.CheerRadius * C.CheerRadius
 	for _, fans in fansByRow do
 		for _, fan in fans do
 			local target = 0
+			local p = fan.base.Position
+			for _, zone in cheerZones do
+				if (zone.position - p).Magnitude < zone.radius then
+					target = 1
+				end
+			end
 			if all then
 				target = 1
-			else
-				local p = fan.base.Position
+			elseif target == 0 then
 				for _, rp in racers do
 					local dx, dz = rp.X - p.X, rp.Z - p.Z
 					if dx * dx + dz * dz < r2 then
