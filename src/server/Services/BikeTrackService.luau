@@ -4,7 +4,9 @@
 --    мгновенно ставим в ближайшую точку центральной линии той же дороги, лицом по ходу движения
 --    (не к чекпоинту!). В ямах под разрывами не трогаем — там зона падения (ProgressTracker);
 --  * трамплины (тег LaunchPad): въехал на скорости — бросок вперёд и вверх;
---  * ускорители (тег BoostPad): скорость ×BoostMultiplier на BoostSeconds.
+--  * ускорители (тег BoostPad): скорость ×BoostMultiplier на BoostSeconds;
+--  * мост с падающими плитами (тег FallingPlate): наехал — плита мигает PlateWarnTime и падает,
+--    через PlateRespawnTime возвращается. Под мостом — зона падения (возврат к чекпоинту).
 -- Работает для участников, которые сейчас на велоэтапе: отстреляли первый рубеж, ещё не второй.
 --
 -- Дорога: детали с тегом BikeRoad. Отрезки «Seg» — прямые куски по центральной линии
@@ -12,6 +14,7 @@
 -- по их верхней грани. Остальные (кочки, трамплины, крыши) — просто поверхность, на центральную линию не влияют.
 
 local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -32,6 +35,9 @@ type Segment = { a: Vector3, b: Vector3, halfWidth: number }
 local segments: { Segment } = {}
 
 local offRoadSince: { [Player]: number } = {}
+
+type Plate = { part: BasePart, home: CFrame, color: Color3, busy: boolean }
+local plates: { Plate } = {}
 local launchReadyAt: { [Player]: number } = {}
 
 local function log(fmt: string, ...: any)
@@ -172,6 +178,42 @@ local function checkPads(player: Player, root: BasePart, now: number)
 	end
 end
 
+---------------------------------------------------------------- падающие плиты
+
+local function dropPlate(plate: Plate)
+	plate.busy = true
+	local part = plate.part
+	part.Color = C.PlateWarnColor
+	task.delay(C.PlateWarnTime, function()
+		part.CanCollide = false
+		TweenService:Create(part, TweenInfo.new(C.PlateFallTime, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			CFrame = plate.home * CFrame.new(0, -C.PlateFallDepth, 0) * CFrame.Angles(math.rad(25), 0, math.rad(15)),
+			Transparency = 1,
+		}):Play()
+		task.delay(C.PlateRespawnTime, function()
+			part.CFrame = plate.home
+			part.Color = plate.color
+			part.Transparency = 0
+			part.CanCollide = true
+			plate.busy = false
+		end)
+	end)
+end
+
+local function checkPlates(root: BasePart)
+	local position = root.Position
+	for _, plate in plates do
+		if not plate.busy then
+			local p = plate.home:PointToObjectSpace(position)
+			local half = plate.part.Size / 2
+			-- +1 стад: швы между плитами тоже считаются (стоишь на стыке — падают обе)
+			if math.abs(p.X) <= half.X + 1 and math.abs(p.Z) <= half.Z + 1 and p.Y > 0 and p.Y < 6 then
+				dropPlate(plate)
+			end
+		end
+	end
+end
+
 local function step()
 	if RaceManager.getState() ~= "Racing" or #segments == 0 then
 		return
@@ -187,6 +229,7 @@ local function step()
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if character and humanoid and root and humanoid.Health > 0 then
 			checkPads(player, root, now)
+			checkPlates(root)
 			checkOffRoad(player, character, humanoid, root, now)
 		end
 	end
@@ -203,7 +246,12 @@ function BikeTrackService.start()
 	for _, part in CollectionService:GetTagged(C.RoadTag) do
 		addSegmentFrom(part)
 	end
-	log("%d road segment(s) loaded", #segments)
+	for _, part in CollectionService:GetTagged(C.PlateTag) do
+		if part:IsA("BasePart") then
+			table.insert(plates, { part = part, home = part.CFrame, color = part.Color, busy = false })
+		end
+	end
+	log("%d road segment(s), %d falling plate(s) loaded", #segments, #plates)
 	Players.PlayerRemoving:Connect(function(player)
 		offRoadSince[player] = nil
 		launchReadyAt[player] = nil

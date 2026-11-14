@@ -120,11 +120,14 @@ local function render()
 		if myTime then
 			status.Text = "Финиш! " .. formatTime(myTime)
 		else
-			-- своё время идёт со штрафом: каждый промах сразу +N с
+			-- во время гонки: чистое время и штраф отдельно («0:42  +15 с штраф»);
+			-- итог на финише = чистое + штраф (его считает сервер)
 			local penalty = player:GetAttribute(Attributes.PenaltyTime)
 			local p = if typeof(penalty) == "number" then penalty else 0
-			local elapsed = workspace:GetServerTimeNow() - current.raceStartedAt + p
-			status.Text = if p ~= 0 then string.format("%s (%s)", formatTime(elapsed), Format.penalty(p)) else formatTime(elapsed)
+			local clean = workspace:GetServerTimeNow() - current.raceStartedAt
+			status.Text = if p > 0 then string.format("%s  %s штраф", formatTime(clean), Format.penalty(p))
+				elseif p < 0 then string.format("%s  %s бонус", formatTime(clean), Format.penalty(p))
+				else formatTime(clean)
 		end
 	elseif s == "Results" then
 		status.Text = string.format("Результаты • лобби через %d", math.ceil(remaining()))
