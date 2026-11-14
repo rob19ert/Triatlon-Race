@@ -140,6 +140,7 @@ function HazardService.start()
 	loadTagged(H.PendulumTag, "Pendulum")
 	loadTagged(H.WindmillTag, "Windmill")
 	loadTagged(H.TrainTag, "Shuttle")
+	loadTagged(H.MoverTag, "Shuttle")
 	loadTagged(H.GateTag, "Gate")
 	log("%d hazard(s) loaded", #hazards)
 

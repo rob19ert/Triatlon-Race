@@ -52,6 +52,7 @@ end
 watch(H.PendulumTag, "Pendulum")
 watch(H.WindmillTag, "Windmill")
 watch(H.TrainTag, "Shuttle")
+watch(H.MoverTag, "Shuttle")
 watch(H.GateTag, "Gate")
 
 -- мигающие фонари переезда: пока закрыто — попеременно красные

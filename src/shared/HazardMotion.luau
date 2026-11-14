@@ -6,8 +6,9 @@
 -- Виды:
 --  * Pendulum — качание вокруг локальной оси Z детали Pivot (атрибуты Period, AmplitudeDeg, Phase 0–1);
 --  * Windmill — вращение вокруг оси Z Pivot (Rpm, Phase);
---  * Shuttle  — поезд: раз в Period секунд, начиная с Delay, едет вперёд (−Z Pivot) на Distance
---               со скоростью Speed, остальное время стоит в начале (спрятан в депо/тоннеле);
+--  * Shuttle  — поезд/бочка/овца: раз в Period секунд, начиная с Delay, едет вперёд (−Z Pivot) на Distance
+--               со скоростью Speed, остальное время стоит в начале (спрятан в депо/сарае);
+--               RollRadius > 0 — ещё и катится (поворот вокруг оси X Pivot);
 --  * Gate     — шлагбаум: опущен (поворот на −90° вокруг Z Pivot), пока по расписанию закрыто
 --               (Period, ClosedFrom, ClosedTo — секунды внутри периода).
 
@@ -38,6 +39,7 @@ export type Hazard = {
 	delay: number, -- с от начала периода до старта
 	distance: number, -- стад
 	speed: number, -- стад/с
+	rollRadius: number, -- > 0 — катится
 	-- шлагбаум
 	closedFrom: number,
 	closedTo: number,
@@ -83,6 +85,7 @@ function HazardMotion.load(model: Model, kind: Kind): Hazard?
 		delay = numberAttr(model, "Delay", 0),
 		distance = numberAttr(model, "Distance", 0),
 		speed = numberAttr(model, "Speed", 40),
+		rollRadius = numberAttr(model, "RollRadius", 0),
 		closedFrom = numberAttr(model, "ClosedFrom", 0),
 		closedTo = numberAttr(model, "ClosedTo", 0),
 	}
@@ -129,7 +132,8 @@ end
 
 function HazardMotion.partCFrame(h: Hazard, mp: MovingPart, value: number): CFrame
 	if h.kind == "Shuttle" then
-		return h.pivot * CFrame.new(0, 0, -value) * mp.offset
+		local roll = if h.rollRadius > 0 then CFrame.Angles(-value / h.rollRadius, 0, 0) else CFrame.identity
+		return h.pivot * CFrame.new(0, 0, -value) * roll * mp.offset
 	end
 	return h.pivot * CFrame.Angles(0, 0, value) * mp.offset
 end
