@@ -24,6 +24,7 @@ type PlayerStamina = {
 	ignoreRedZonePenalty: boolean, -- финишная прямая: красная зона не замедляет
 	recoveryMultiplier: number, -- догонялка: >1 у отстающих
 	turboUntil: number, -- os.clock() конца турбо (5/5 на рубеже)
+	speedOverride: number?, -- базовая скорость вместо бега (велосипед; в Studio — режим велосипеда)
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -117,6 +118,9 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	end
 
 	local speed = if st.sprinting then Config.Movement.SprintSpeed else Config.Movement.WalkSpeed
+	if st.speedOverride then
+		speed = st.speedOverride
+	end
 	if st.redZone and not st.ignoreRedZonePenalty then
 		speed *= S.RedZoneSpeedMultiplier
 	end
@@ -196,6 +200,19 @@ end
 function StaminaService.isRedZone(player: Player): boolean
 	local st = active[player]
 	return st ~= nil and st.redZone
+end
+
+-- Базовая скорость вместо бега (nil — обычный бег). Множители красной зоны и турбо действуют поверх.
+function StaminaService.setSpeedOverride(player: Player, speed: number?)
+	local st = active[player]
+	if st then
+		st.speedOverride = speed
+	end
+end
+
+function StaminaService.getSpeedOverride(player: Player): number?
+	local st = active[player]
+	return st and st.speedOverride
 end
 
 -- Турбо: скорость ×TurboSpeedMultiplier на seconds секунд (награда за 5/5).

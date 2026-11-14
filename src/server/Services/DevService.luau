@@ -13,6 +13,7 @@ local D = Config.Dev
 local DevService = {}
 
 local RaceManager: any
+local StaminaService: any
 local ProgressTracker: any
 local ShootingService: any
 local slot = 0 -- раскладываем по ширине, чтобы не стояли друг в друге
@@ -44,11 +45,22 @@ function DevService.init(services: { [string]: any })
 	RaceManager = services.RaceManager
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
+	StaminaService = services.StaminaService
+end
+
+local function onBikeMode(player: Player)
+	if not RunService:IsStudio() then
+		return
+	end
+	local on = StaminaService.getSpeedOverride(player) == nil
+	StaminaService.setSpeedOverride(player, if on then D.BikeModeSpeed else nil)
+	print(string.format("[DevService] %s bike mode %s", player.Name, if on then "ON" else "OFF"))
 end
 
 function DevService.start()
 	if RunService:IsStudio() then
 		Remotes.get(Remotes.Names.DevToFinish).OnServerEvent:Connect(onToFinish)
+		Remotes.get(Remotes.Names.DevBikeMode).OnServerEvent:Connect(onBikeMode)
 	end
 end
 

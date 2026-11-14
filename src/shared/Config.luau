@@ -204,6 +204,8 @@ local Config = {
 	-- Только Studio: помощники для тестов на нескольких клиентах
 	Dev = {
 		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы
+		BikeModeKey = Enum.KeyCode.B, -- вкл/выкл скорость велосипеда (проверка петли до велосипеда)
+		BikeModeSpeed = 40,
 		ToFinishDistance = 10, -- стад до финишной линии
 		ToFinishSpacing = 4, -- стад между игроками по ширине
 	},
