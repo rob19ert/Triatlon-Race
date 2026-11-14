@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
 local Types = require(ReplicatedStorage.Shared:WaitForChild("Types"))
 local Attributes = require(ReplicatedStorage.Shared:WaitForChild("Attributes"))
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 local Config = require(ReplicatedStorage.Shared:WaitForChild("Config"))
 
 local player = Players.LocalPlayer
@@ -123,7 +124,7 @@ local function render()
 			local penalty = player:GetAttribute(Attributes.PenaltyTime)
 			local p = if typeof(penalty) == "number" then penalty else 0
 			local elapsed = workspace:GetServerTimeNow() - current.raceStartedAt + p
-			status.Text = if p > 0 then string.format("%s (+%d с)", formatTime(elapsed), p) else formatTime(elapsed)
+			status.Text = if p ~= 0 then string.format("%s (%s)", formatTime(elapsed), Format.penalty(p)) else formatTime(elapsed)
 		end
 	elseif s == "Results" then
 		status.Text = string.format("Результаты • лобби через %d", math.ceil(remaining()))
@@ -154,7 +155,7 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: {
 			table.insert(lines, string.format("DNF   %s%s", entry.name, accuracy))
 		else
 			local photo = if entry.photoFinish then "   📸" else ""
-			local penalty = if entry.penalty and entry.penalty > 0 then string.format(" (+%d с)", entry.penalty) else ""
+			local penalty = if entry.penalty and entry.penalty ~= 0 then string.format(" (%s)", Format.penalty(entry.penalty)) else ""
 			table.insert(lines, string.format("%d.   %s   %s%s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), penalty, accuracy, photo))
 		end
 	end

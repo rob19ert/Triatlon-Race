@@ -1,5 +1,5 @@
 --!strict
--- «+3 с» над головой игрока при каждом промахе — видят все.
+-- «+3 с» над головой игрока при каждом промахе (зелёное «−3 с» — золотая мишень) — видят все.
 -- Следим за атрибутом PenaltyTime у всех игроков: вырос — всплывает разница.
 -- Всё локально (BillboardGui в PlayerGui с Adornee = голова), сервер не нагружаем.
 
@@ -14,7 +14,7 @@ local Attributes = require(Shared:WaitForChild("Attributes"))
 local P = Config.Penalty
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local function popup(target: Player, added: number)
+local function popup(target: Player, added: number) -- added < 0 — бонус (золотая мишень)
 	local character = target.Character
 	local head = character and character:FindFirstChild("Head")
 	if not head or not head:IsA("BasePart") then
@@ -34,8 +34,8 @@ local function popup(target: Player, added: number)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
-	label.Text = string.format("+%d с", added)
-	label.TextColor3 = Color3.fromRGB(255, 70, 70)
+	label.Text = if added > 0 then string.format("+%d с", added) else string.format("−%d с", -added)
+	label.TextColor3 = if added > 0 then Color3.fromRGB(255, 70, 70) else Color3.fromRGB(70, 220, 90)
 	label.TextStrokeColor3 = Color3.new(1, 1, 1)
 	label.TextStrokeTransparency = 0
 	label.Parent = gui
@@ -65,7 +65,7 @@ local function watch(target: Player)
 	last = current()
 	target:GetAttributeChangedSignal(Attributes.PenaltyTime):Connect(function()
 		local now = current()
-		if now > last then
+		if now ~= last and target:GetAttribute(Attributes.PenaltyTime) ~= nil and math.abs(now - last) < 30 then
 			popup(target, now - last)
 		end
 		last = now -- обнуление в новой гонке — без всплывашки

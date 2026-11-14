@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 
 local TAG = "Scoreboard"
 local PIXELS_PER_STUD = 24
@@ -194,8 +195,8 @@ local function renderBoard(board: Board)
 				break
 			end
 			local status, color = phaseText(entry)
-			if entry.penalty > 0 then
-				status ..= string.format("  +%dс", entry.penalty)
+			if entry.penalty ~= 0 then
+				status ..= "  " .. Format.penalty(entry.penalty, true) .. "с"
 			end
 			setRow(row, tostring(entry.place), entry.name, status, color, entry.place == 1)
 		end
@@ -211,7 +212,7 @@ local function renderBoard(board: Board)
 				setRow(row, "—", entry.name, "DNF", DIM, false)
 			else
 				local photo = if entry.photoFinish then "📸 " else ""
-				local penalty = if entry.penalty and entry.penalty > 0 then string.format(" (+%d)", entry.penalty) else ""
+				local penalty = if entry.penalty and entry.penalty ~= 0 then string.format(" (%s)", Format.penalty(entry.penalty, true)) else ""
 				setRow(row, tostring(entry.place), entry.name, photo .. formatTime(entry.time or 0) .. penalty, GOLD, entry.place == 1)
 			end
 		end

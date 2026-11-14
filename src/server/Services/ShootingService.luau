@@ -20,6 +20,7 @@ local Aim = require(ReplicatedStorage.Shared.Aim)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 local C = Config.Shooting
+local R = Config.Reward
 
 local ShootingService = {}
 
@@ -33,10 +34,15 @@ local shotMissedEvent = Instance.new("BindableEvent")
 -- (player: Player) — промах (сразу после выстрела): PenaltyService прибавляет штрафное время
 ShootingService.ShotMissed = shotMissedEvent.Event
 
+local goldenHitEvent = Instance.new("BindableEvent")
+-- (player: Player) — попал в золотую мишень: PenaltyService снимает GoldenBonusSeconds
+ShootingService.GoldenHit = goldenHitEvent.Event
+
 type Lane = {
 	index: number,
 	eye: BasePart,
 	targets: { BasePart },
+	targetSizes: { Vector3 }, -- исходные размеры (золотая мишень временно меньше)
 }
 
 type Range = {
@@ -57,6 +63,7 @@ type Session = {
 	holdReadyAt: number,
 	holds: { Aim.Hold },
 	track: Aim.Track,
+	golden: number?, -- индекс золотой мишени на этой стрельбе
 	finishing: boolean,
 }
 
@@ -111,16 +118,19 @@ local function loadRange(model: Model): Range?
 		local eye = laneModel:FindFirstChild("Eye")
 		if eye and eye:IsA("BasePart") then
 			local targets: { BasePart } = {}
+			local targetSizes: { Vector3 } = {}
 			for i = 1, C.ShotsPerStage do
 				local target = laneModel:FindFirstChild("Target" .. i)
 				if target and target:IsA("BasePart") then
 					table.insert(targets, target)
+					table.insert(targetSizes, target.Size)
 				end
 			end
 			table.insert(lanes, {
 				index = (laneModel:GetAttribute("Index") :: number?) or #lanes + 1,
 				eye = eye,
 				targets = targets,
+				targetSizes = targetSizes,
 			})
 		end
 	end
@@ -150,9 +160,18 @@ local function loadRange(model: Model): Range?
 end
 
 local function resetLaneTargets(lane: Lane)
-	for _, target in lane.targets do
+	for i, target in lane.targets do
 		target.Color = C.TargetOpenColor
+		target.Size = lane.targetSizes[i]
 	end
+end
+
+-- Золотая мишень: меньше и золотая (её видят все — меняем саму деталь).
+local function makeGolden(lane: Lane, index: number)
+	local target = lane.targets[index]
+	local base = lane.targetSizes[index]
+	target.Size = Vector3.new(base.X, base.Y * R.GoldenSizeMultiplier, base.Z * R.GoldenSizeMultiplier)
+	target.Color = R.GoldenColor
 end
 
 local function resetRange(range: Range)
@@ -231,8 +250,12 @@ local function startSession(player: Player, range: Range, root: BasePart)
 		holdReadyAt = 0,
 		holds = {},
 		track = track,
+		golden = if trackRng:NextNumber() < R.GoldenChance then trackRng:NextInteger(1, #lane.targets) else nil,
 		finishing = false,
 	}
+	if session.golden then
+		makeGolden(lane, session.golden)
+	end
 	sessions[player] = session
 	-- соперники видят, кто стреляет и сколько закрыл
 	player:SetAttribute(Attributes.RangeOrder, range.order)
@@ -256,13 +279,14 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	}
 	remoteStarted:FireClient(player, payload)
 	log(
-		"%s -> range %d lane %d (%s, pulse %d, period %.2fs)",
+		"%s -> range %d lane %d (%s, pulse %d, period %.2fs, golden %s)",
 		player.Name,
 		range.order,
 		lane.index,
 		range.stance,
 		math.floor(pulse + 0.5),
-		2 * math.pi / track.speed
+		2 * math.pi / track.speed,
+		if session.golden then "#" .. session.golden else "-"
 	)
 end
 
@@ -292,6 +316,11 @@ local function finishSession(player: Player, session: Session)
 	results[player][session.range.order] = { hits = hits, misses = misses }
 
 	endSession(player, session)
+
+	-- чистая стрельба — турбо на выходе с рубежа
+	if hits == C.ShotsPerStage then
+		StaminaService.grantTurbo(player, R.TurboSeconds)
+	end
 
 	local summary: Types.ShootingSummary = {
 		userId = player.UserId,
@@ -353,7 +382,8 @@ local function onFireShot(player: Player, shotTime: unknown)
 	local hitIndex: number? = nil
 	local hitClosed = false
 	for i, target in session.lane.targets do
-		if rayHitsTarget(shot.Position, shot.LookVector, target, radius) then
+		local r = if i == session.golden then radius * R.GoldenSizeMultiplier else radius
+		if rayHitsTarget(shot.Position, shot.LookVector, target, r) then
 			if session.hits[i] then
 				hitClosed = true -- попал в уже закрытую — это промах
 			else
@@ -384,11 +414,14 @@ local function onFireShot(player: Player, shotTime: unknown)
 		targetIndex = hitIndex,
 		shotsLeft = session.shotsLeft,
 		impact = if firstTarget then rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
+		golden = hitIndex ~= nil and hitIndex == session.golden,
 	}
 	remoteShotResult:FireClient(player, result)
 	player:SetAttribute(Attributes.RangeMarks, (player:GetAttribute(Attributes.RangeMarks) or "") .. (if hitIndex then "H" else "M"))
 	if not hitIndex then
 		shotMissedEvent:Fire(player)
+	elseif hitIndex == session.golden then
+		goldenHitEvent:Fire(player)
 	end
 
 	if session.shotsLeft == 0 then

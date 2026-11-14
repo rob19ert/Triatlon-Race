@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 
 local player = Players.LocalPlayer
 local focusRemote = Remotes.get(Remotes.Names.SpectateFocus)
@@ -166,7 +167,7 @@ local function update()
 
 	gui.Enabled = true
 	local phase = PHASE_TEXT[entry.phase] or ""
-	local penalty = if entry.penalty > 0 then string.format(" • +%d с", entry.penalty) else ""
+	local penalty = if entry.penalty ~= 0 then " • " .. Format.penalty(entry.penalty) else ""
 	label.Text = string.format("👀 %s • %d место • %s%s", entry.name, entry.place, phase, penalty)
 	prevButton.Visible = #list > 1
 	nextButton.Visible = #list > 1

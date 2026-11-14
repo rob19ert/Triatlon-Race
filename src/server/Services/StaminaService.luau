@@ -23,6 +23,7 @@ type PlayerStamina = {
 	sprinting: boolean, -- спринт реально работает
 	ignoreRedZonePenalty: boolean, -- финишная прямая: красная зона не замедляет
 	recoveryMultiplier: number, -- догонялка: >1 у отстающих
+	turboUntil: number, -- os.clock() конца турбо (5/5 на рубеже)
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -56,6 +57,7 @@ local function clearAttributes(player: Player)
 	player:SetAttribute(Attributes.Pulse, nil)
 	player:SetAttribute(Attributes.RedZone, nil)
 	player:SetAttribute(Attributes.Sprinting, nil)
+	player:SetAttribute(Attributes.TurboUntil, nil)
 end
 
 local function addPulse(st: PlayerStamina, delta: number)
@@ -118,6 +120,9 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if st.redZone and not st.ignoreRedZonePenalty then
 		speed *= S.RedZoneSpeedMultiplier
 	end
+	if os.clock() < st.turboUntil then
+		speed *= Config.Reward.TurboSpeedMultiplier
+	end
 	if humanoid.WalkSpeed ~= speed then
 		humanoid.WalkSpeed = speed
 	end
@@ -160,6 +165,7 @@ function StaminaService.beginRace(players: { Player })
 			sprinting = false,
 			ignoreRedZonePenalty = false,
 			recoveryMultiplier = 1,
+			turboUntil = 0,
 			lastVelY = 0,
 			publishedPulse = nil,
 		}
@@ -190,6 +196,17 @@ end
 function StaminaService.isRedZone(player: Player): boolean
 	local st = active[player]
 	return st ~= nil and st.redZone
+end
+
+-- Турбо: скорость ×TurboSpeedMultiplier на seconds секунд (награда за 5/5).
+function StaminaService.grantTurbo(player: Player, seconds: number)
+	local st = active[player]
+	if not st then
+		return
+	end
+	st.turboUntil = os.clock() + seconds
+	player:SetAttribute(Attributes.TurboUntil, workspace:GetServerTimeNow() + seconds)
+	print(string.format("[StaminaService] %s TURBO %ds", player.Name, seconds))
 end
 
 -- Догонялка: отстающие (последняя треть таблицы) восстанавливают пульс быстрее.

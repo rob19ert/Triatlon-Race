@@ -15,7 +15,7 @@ export type ResultEntry = {
 	name: string,
 	place: number?, -- nil для DNF
 	time: number?, -- секунды со штрафом, nil для DNF
-	penalty: number?, -- штрафное время в составе time, с
+	penalty: number?, -- штраф/бонус в составе time, с (может быть < 0)
 	dnf: boolean,
 	hits: number?, -- попаданий за всю гонку (заполняется в итогах)
 	shots: number?,
@@ -30,7 +30,7 @@ export type StandingEntry = {
 	name: string,
 	place: number,
 	phase: RacePhase,
-	penalty: number, -- накопленное штрафное время, с
+	penalty: number, -- штраф/бонус, с (может быть < 0)
 	time: number?, -- для phase = "Finished" (со штрафом)
 }
 
@@ -54,6 +54,7 @@ export type ShotResultPayload = {
 	targetIndex: number?, -- какая мишень закрылась
 	shotsLeft: number,
 	impact: Vector3?, -- куда пришла пуля в плоскости мишеней (для следа на щите)
+	golden: boolean?, -- попал в золотую мишень (бонус)
 }
 
 export type ShootingSummary = {

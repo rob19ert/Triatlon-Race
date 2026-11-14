@@ -1,5 +1,6 @@
 --!strict
--- Штрафное время: каждый промах сразу прибавляет Config.Penalty.SecondsPerMiss
+-- Штрафное время: каждый промах сразу прибавляет Config.Penalty.SecondsPerMiss,
+-- попадание в золотую мишень — вычитает Config.Reward.GoldenBonusSeconds
 -- к индивидуальному времени игрока. Итоговое время = время до финишной линии + штраф.
 -- Накопленный штраф — в атрибуте PenaltyTime на игроке: его видят все клиенты
 -- (всплывающее «+3 с» над головой, таймер, таблица позиций, табло).
@@ -32,6 +33,17 @@ local function onShotMissed(player: Player)
 	print(string.format("[PenaltyService] %s +%ds (total %ds)", player.Name, P.SecondsPerMiss, seconds[player]))
 end
 
+-- Золотая мишень: бонус — время уменьшается (штраф может уйти в минус).
+local function onGoldenHit(player: Player)
+	local current = seconds[player]
+	if not current then
+		return
+	end
+	seconds[player] = current - Config.Reward.GoldenBonusSeconds
+	publish(player)
+	print(string.format("[PenaltyService] %s golden -%ds (total %ds)", player.Name, Config.Reward.GoldenBonusSeconds, seconds[player]))
+end
+
 function PenaltyService.beginRace(players: { Player })
 	PenaltyService.endRace()
 	for _, player in players do
@@ -58,6 +70,7 @@ end
 
 function PenaltyService.start()
 	ShootingService.ShotMissed:Connect(onShotMissed)
+	ShootingService.GoldenHit:Connect(onGoldenHit)
 	Players.PlayerRemoving:Connect(function(player)
 		seconds[player] = nil
 	end)

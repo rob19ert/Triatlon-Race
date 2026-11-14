@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Attributes = require(Shared:WaitForChild("Attributes"))
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 
 local SHOTS = Config.Shooting.ShotsPerStage
 local LEAVE_SECONDS = 6
@@ -27,6 +28,7 @@ local PAD = Color3.fromRGB(235, 238, 245)
 local HIT = Color3.fromRGB(20, 20, 24)
 local MISS = Color3.fromRGB(230, 50, 50)
 local EMPTY = Color3.fromRGB(190, 195, 205)
+local BONUS = Color3.fromRGB(90, 220, 110)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -338,7 +340,9 @@ local function render()
 			row.name.Text = s.name
 			local p = Players:GetPlayerByUserId(s.userId)
 			local pen = p and p:GetAttribute(Attributes.PenaltyTime)
-			row.penalty.Text = if typeof(pen) == "number" and pen > 0 then string.format("+%d", pen) else ""
+			local penNum = if typeof(pen) == "number" then pen else 0
+			row.penalty.Text = Format.penalty(penNum, true)
+			row.penalty.TextColor3 = if penNum < 0 then BONUS else MISS
 			-- ушёл с рубежа — полоса светлее
 			row.inner.BackgroundTransparency = if s.leftAt then 0.35 else 0.08
 			local url = thumbnail(s.userId)

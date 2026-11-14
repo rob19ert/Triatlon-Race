@@ -372,7 +372,7 @@ Remotes.get(Remotes.Names.ShotResult).OnClientEvent:Connect(function(result: Typ
 	if result.hit and result.impact then
 		Fx.burst("Confetti", result.impact)
 	end
-	ShotFeedback.onResult(result.hit, result.targetIndex, result.impact, state.eye.Position, state.shotsFired, state.shotsFired + result.shotsLeft)
+	ShotFeedback.onResult(result.hit, result.targetIndex, result.impact, state.eye.Position, state.shotsFired, state.shotsFired + result.shotsLeft, result.golden)
 end)
 
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)

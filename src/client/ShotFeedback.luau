@@ -126,7 +126,7 @@ local function findTarget(index: number, near: Vector3): BasePart?
 	return best
 end
 
-function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vector3?, eyePos: Vector3, shotsFired: number, totalShots: number)
+function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vector3?, eyePos: Vector3, shotsFired: number, totalShots: number, golden: boolean?)
 	if hit then
 		streak += 1
 		hits += 1
@@ -143,7 +143,9 @@ function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vecto
 
 	local last = shotsFired >= totalShots
 	if last and hits == totalShots then
-		showStreak(string.format("ЧИСТО %d/%d!", hits, totalShots), GOLD, true)
+		showStreak(string.format("ЧИСТО %d/%d! 🔥 ТУРБО", hits, totalShots), GOLD, true)
+	elseif golden then
+		showStreak(string.format("⭐ ЗОЛОТО! −%d с", Config.Reward.GoldenBonusSeconds), GOLD, true)
 	elseif not hit then
 		showStreak(string.format("+%d с", Config.Penalty.SecondsPerMiss), RED, true) -- штраф за промах
 	elseif streak >= 4 then

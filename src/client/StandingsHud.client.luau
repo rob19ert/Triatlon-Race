@@ -9,6 +9,7 @@ local StarterGui = game:GetService("StarterGui")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
+local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 
 local player = Players.LocalPlayer
 
@@ -103,7 +104,9 @@ end
 local function fillRow(row: TextLabel, entry: Types.StandingEntry)
 	local mine = entry.userId == player.UserId
 	local status = statusText(entry)
-	local penalty = if entry.penalty > 0 then string.format("  <font color=\"#FF6464\">+%dс</font>", entry.penalty) else ""
+	local penalty = if entry.penalty ~= 0
+		then string.format('  <font color="%s">%sс</font>', if entry.penalty > 0 then "#FF6464" else "#5ADC6E", Format.penalty(entry.penalty, true))
+		else ""
 	row.Text = string.format(
 		"<b>%d.</b> %s%s%s",
 		entry.place,
