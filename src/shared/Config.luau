@@ -93,7 +93,7 @@ local Config = {
 		RecoilFovKick = 2, -- градусов FOV на мгновение шире
 		MissShakeDeg = 0.35, -- встряска камеры при промахе
 		MissShakeTime = 0.22,
-		ShutterTime = 0.14, -- с, шторка падает на мишень
+		ShutterTime = 0.08, -- с, шторка падает на мишень (резкий старт)
 		StreakShowTime = 1.3, -- с, сколько висит надпись серии
 
 		-- клиент

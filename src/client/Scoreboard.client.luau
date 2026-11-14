@@ -195,7 +195,8 @@ local function renderBoard(board: Board)
 				break
 			end
 			local status, color = phaseText(entry)
-			if entry.penalty ~= 0 then
+			-- штраф показываем, пока бежит; у финишировавшего время уже итоговое (со штрафом)
+			if entry.penalty ~= 0 and entry.phase ~= "Finished" then
 				status ..= "  " .. Format.penalty(entry.penalty, true) .. "с"
 			end
 			setRow(row, tostring(entry.place), entry.name, status, color, entry.place == 1)
@@ -212,8 +213,8 @@ local function renderBoard(board: Board)
 				setRow(row, "—", entry.name, "DNF", DIM, false)
 			else
 				local photo = if entry.photoFinish then "📸 " else ""
-				local penalty = if entry.penalty and entry.penalty ~= 0 then string.format(" (%s)", Format.penalty(entry.penalty, true)) else ""
-				setRow(row, tostring(entry.place), entry.name, photo .. formatTime(entry.time or 0) .. penalty, GOLD, entry.place == 1)
+				-- только итоговое время (штраф уже внутри)
+				setRow(row, tostring(entry.place), entry.name, photo .. formatTime(entry.time or 0), GOLD, entry.place == 1)
 			end
 		end
 	else

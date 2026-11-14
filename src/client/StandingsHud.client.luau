@@ -104,7 +104,8 @@ end
 local function fillRow(row: TextLabel, entry: Types.StandingEntry)
 	local mine = entry.userId == player.UserId
 	local status = statusText(entry)
-	local penalty = if entry.penalty ~= 0
+	-- у финишировавшего время уже итоговое (со штрафом) — штраф отдельно не пишем
+	local penalty = if entry.penalty ~= 0 and entry.phase ~= "Finished"
 		then string.format('  <font color="%s">%sс</font>', if entry.penalty > 0 then "#FF6464" else "#5ADC6E", Format.penalty(entry.penalty, true))
 		else ""
 	row.Text = string.format(

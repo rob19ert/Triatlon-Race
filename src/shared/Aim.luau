@@ -79,6 +79,32 @@ function Aim.crosshair(track: Track, t: number, holds: { Hold }, pulse: number, 
 	return yaw, pitch
 end
 
+-- Точка, где луч пересекает плоскость мишени (ось цилиндра мишени смотрит на стрелка).
+function Aim.rayPlanePoint(origin: Vector3, dir: Vector3, target: BasePart): Vector3?
+	local normal = target.CFrame.RightVector
+	local denom = dir:Dot(normal)
+	if math.abs(denom) < 1e-6 then
+		return nil
+	end
+	local s = (target.Position - origin):Dot(normal) / denom
+	if s <= 0 then
+		return nil
+	end
+	return origin + dir * s
+end
+
+-- Первая мишень, в которую попал луч (radiusFor(i) — радиус i-й мишени). Закрыта ли она — решает вызывающий.
+-- Общая для сервера (решение) и клиента (мгновенное предсказание).
+function Aim.findHit(origin: Vector3, dir: Vector3, targets: { BasePart }, radiusFor: (number) -> number): number?
+	for i, target in targets do
+		local point = Aim.rayPlanePoint(origin, dir, target)
+		if point and (point - target.Position).Magnitude <= radiusFor(i) then
+			return i
+		end
+	end
+	return nil
+end
+
 -- Направление от точки глаз.
 function Aim.cframe(eye: CFrame, yawDeg: number, pitchDeg: number): CFrame
 	return eye * CFrame.Angles(0, -math.rad(yawDeg), 0) * CFrame.Angles(math.rad(pitchDeg), 0, 0)

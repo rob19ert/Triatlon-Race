@@ -8,7 +8,6 @@
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Debris = game:GetService("Debris")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -86,8 +85,14 @@ function ShotFeedback.onFire()
 	recoilAt = os.clock()
 end
 
--- Белая шторка падает на мишень (локальная копия, сервер и так красит мишень в белый).
+-- Белая шторка падает на мишень (локальная копия; сервер и так красит мишень в белый).
+-- Ссылку храним: если сервер не подтвердит попадание — шторку убираем.
+local shutters: { [BasePart]: BasePart } = {}
+
 local function dropShutter(target: BasePart, eyePos: Vector3)
+	if shutters[target] then
+		return
+	end
 	local shutter = Instance.new("Part")
 	shutter.Name = "Shutter"
 	shutter.Shape = Enum.PartType.Cylinder
@@ -103,44 +108,26 @@ local function dropShutter(target: BasePart, eyePos: Vector3)
 	local finalCf = target.CFrame + toShooter
 	shutter.CFrame = finalCf + Vector3.new(0, target.Size.Y * 1.3, 0)
 	shutter.Parent = workspace
-	TweenService:Create(shutter, TweenInfo.new(C.ShutterTime, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = finalCf }):Play()
-	Debris:AddItem(shutter, 2) -- к этому времени сервер уже покрасил мишень
+	-- резкий старт и мягкая посадка: отклик сразу в кадре нажатия
+	TweenService:Create(shutter, TweenInfo.new(C.ShutterTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = finalCf }):Play()
+	shutters[target] = shutter
+	task.delay(2, function() -- к этому времени сервер уже покрасил мишень
+		if shutters[target] == shutter then
+			shutters[target] = nil
+		end
+		shutter:Destroy()
+	end)
 end
 
--- Мишень с номером index, ближайшая к точке попадания.
-local function findTarget(index: number, near: Vector3): BasePart?
-	local name = "Target" .. index
-	local track = workspace:FindFirstChild(Config.Track.FolderName)
-	if not track then
-		return nil
+local function removeShutter(target: BasePart)
+	local shutter = shutters[target]
+	if shutter then
+		shutters[target] = nil
+		shutter:Destroy()
 	end
-	local best: BasePart?, bestDist = nil, 4
-	for _, d in track:GetDescendants() do
-		if d.Name == name and d:IsA("BasePart") then
-			local dist = (d.Position - near).Magnitude
-			if dist < bestDist then
-				best, bestDist = d, dist
-			end
-		end
-	end
-	return best
 end
 
-function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vector3?, eyePos: Vector3, shotsFired: number, totalShots: number, golden: boolean?)
-	if hit then
-		streak += 1
-		hits += 1
-		if targetIndex and impact then
-			local target = findTarget(targetIndex, impact)
-			if target then
-				dropShutter(target, eyePos)
-			end
-		end
-	else
-		streak = 0
-		shakeAt = os.clock()
-	end
-
+local function announce(hit: boolean, shotsFired: number, totalShots: number, golden: boolean?)
 	local last = shotsFired >= totalShots
 	if last and hits == totalShots then
 		showStreak(string.format("ЧИСТО %d/%d! 🔥 ТУРБО", hits, totalShots), GOLD, true)
@@ -155,6 +142,40 @@ function ShotFeedback.onResult(hit: boolean, targetIndex: number?, impact: Vecto
 	elseif streak == 2 then
 		showStreak("2 подряд!", GOLD, false)
 	end
+end
+
+-- Результат выстрела (предсказанный клиентом сразу при нажатии).
+function ShotFeedback.onResult(hit: boolean, target: BasePart?, eyePos: Vector3, shotsFired: number, totalShots: number, golden: boolean?)
+	if hit then
+		streak += 1
+		hits += 1
+		if target then
+			dropShutter(target, eyePos)
+		end
+	else
+		streak = 0
+		shakeAt = os.clock()
+	end
+	announce(hit, shotsFired, totalShots, golden)
+end
+
+-- Сервер решил иначе, чем предсказал клиент (редкий пограничный случай) — исправляем картинку.
+-- wrongTarget — мишень, которую клиент закрыл зря; rightTarget — которую закрыл сервер.
+function ShotFeedback.correct(serverHit: boolean, wrongTarget: BasePart?, rightTarget: BasePart?, eyePos: Vector3, serverHits: number, shotsFired: number, totalShots: number, golden: boolean?)
+	if wrongTarget then
+		removeShutter(wrongTarget)
+	end
+	hits = serverHits
+	if serverHit then
+		streak = 1
+		if rightTarget then
+			dropShutter(rightTarget, eyePos)
+		end
+	else
+		streak = 0
+		shakeAt = os.clock()
+	end
+	announce(serverHit, shotsFired, totalShots, golden)
 end
 
 -- Смещение камеры прицела сейчас: (рысканье°, тангаж°, +FOV°). Добавляется только к картинке.

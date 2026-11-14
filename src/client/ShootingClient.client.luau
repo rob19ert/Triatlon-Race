@@ -3,6 +3,7 @@
 -- мушка-маятник, ввод выстрела и задержки дыхания, HUD патронов/ветра/дыхания.
 -- Клиент шлёт только «когда нажал»; где была мушка и попал ли, сервер считает по той же формуле (Shared/Aim).
 
+local CollectionService = game:GetService("CollectionService")
 local ContextActionService = game:GetService("ContextActionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -38,7 +39,14 @@ type AimState = {
 	lastHoldUntil: number,
 	lastShotAt: number,
 	savedFov: number,
+	-- мгновенное предсказание выстрела (сервер потом подтверждает)
+	targets: { BasePart },
+	closed: { [number]: boolean },
+	pending: { Prediction },
+	serverHits: number,
 }
+
+type Prediction = { shotNo: number, hit: boolean, index: number?, golden: boolean }
 
 local aim: AimState? = nil
 local fireButton: TouchButtons.Handle? = nil
@@ -241,6 +249,77 @@ local function renderAim()
 	updateTouchButtons(state, t)
 end
 
+---------------------------------------------------------------- предсказание выстрела
+-- Клиент считает попадание сам по той же формуле, что и сервер (Shared/Aim), и рисует
+-- результат в кадре нажатия. Сервер решает окончательно; при расхождении — поправка.
+
+local predictShot: (AimState, number) -> ()
+
+-- Мишени своего рубежа: ищем полосу, чья точка глаз совпадает с присланной сервером.
+local function findLaneTargets(eye: CFrame): { BasePart }
+	for _, range in CollectionService:GetTagged(C.RangeTag) do
+		for _, d in range:GetDescendants() do
+			if d.Name == "Eye" and d:IsA("BasePart") and (d.Position - eye.Position).Magnitude < 0.2 then
+				local lane = d.Parent :: Instance
+				local targets: { BasePart } = {}
+				for i = 1, C.ShotsPerStage do
+					local target = lane:FindFirstChild("Target" .. i)
+					if target and target:IsA("BasePart") then
+						table.insert(targets, target)
+					end
+				end
+				return targets
+			end
+		end
+	end
+	return {}
+end
+
+local function isGolden(target: BasePart): boolean
+	local g = Config.Reward.GoldenColor
+	local c = target.Color
+	return math.abs(c.R - g.R) < 0.05 and math.abs(c.G - g.G) < 0.05 and math.abs(c.B - g.B) < 0.05
+end
+
+-- Нарисовать результат выстрела номер shotNo (кружок, след, конфетти, шторка, серия).
+local function showShot(state: AimState, shotNo: number, hit: boolean, index: number?, impact: Vector3?, golden: boolean)
+	local dot = dots[shotNo]
+	if dot then
+		dot.BackgroundColor3 = if hit then DOT_HIT else DOT_MISS
+	end
+	if impact then
+		showImpact(state, impact, hit)
+		if hit then
+			Fx.burst("Confetti", impact)
+		end
+	end
+	local target = if index then state.targets[index] else nil
+	ShotFeedback.onResult(hit, target, state.eye.Position, shotNo, C.ShotsPerStage, golden)
+end
+
+predictShot = function(state: AimState, t: number)
+	local pulse = numberAttr(Attributes.Pulse, Config.Stamina.StartPulse)
+	local yaw, pitch = Aim.crosshair(state.track, t, state.holds, pulse, state.stance)
+	local shot = Aim.cframe(state.eye, yaw, pitch)
+	local radius = C.TargetDiameter[state.stance] / 2
+	local index = Aim.findHit(shot.Position, shot.LookVector, state.targets, function(i)
+		return if isGolden(state.targets[i]) then radius * Config.Reward.GoldenSizeMultiplier else radius
+	end)
+	if index and state.closed[index] then
+		index = nil -- уже закрытая — промах
+	end
+	local golden = index ~= nil and isGolden(state.targets[index])
+	if index then
+		state.closed[index] = true
+	end
+	state.shotsFired += 1
+	state.shotsLeft -= 1
+	local first = state.targets[1]
+	local impact = if first then Aim.rayPlanePoint(shot.Position, shot.LookVector, first) else nil
+	table.insert(state.pending, { shotNo = state.shotsFired, hit = index ~= nil, index = index, golden = golden })
+	showShot(state, state.shotsFired, index ~= nil, index, impact, golden)
+end
+
 local function fire(): Enum.ContextActionResult
 	local state = aim
 	if not state or state.shotsLeft <= 0 then
@@ -253,7 +332,18 @@ local function fire(): Enum.ContextActionResult
 	state.lastShotAt = t
 	fireRemote:FireServer(t)
 	ShotFeedback.onFire()
+	predictShot(state, t)
 	return Enum.ContextActionResult.Sink
+end
+
+-- Только Studio: тестовый крючок — вызвать выстрел как по кнопке (для автотестов через MCP)
+if RunService:IsStudio() then
+	local devFire = Instance.new("BindableEvent")
+	devFire.Name = "DevFire"
+	devFire.Event:Connect(function()
+		fire()
+	end)
+	devFire.Parent = script
 end
 
 local function onFireAction(_: string, inputState: Enum.UserInputState, _: InputObject): Enum.ContextActionResult
@@ -283,6 +373,10 @@ local function enterAim(payload: Types.ShootingStartPayload)
 		lastHoldUntil = numberAttr(Attributes.HoldBreathUntil, 0),
 		lastShotAt = -math.huge,
 		savedFov = camera.FieldOfView,
+		targets = findLaneTargets(payload.eye),
+		closed = {},
+		pending = {},
+		serverHits = 0,
 	}
 	for _, dot in dots do
 		dot.BackgroundColor3 = DOT_EMPTY
@@ -360,19 +454,40 @@ Remotes.get(Remotes.Names.ShotResult).OnClientEvent:Connect(function(result: Typ
 	if not state then
 		return
 	end
-	state.shotsFired += 1
-	state.shotsLeft = result.shotsLeft
-	local dot = dots[state.shotsFired]
+	if result.hit then
+		state.serverHits += 1
+	end
+	local predicted = table.remove(state.pending, 1)
+	if not predicted then
+		-- выстрел без предсказания (не должно случаться) — просто рисуем ответ сервера
+		state.shotsFired += 1
+		state.shotsLeft = result.shotsLeft
+		if result.targetIndex then
+			state.closed[result.targetIndex] = true
+		end
+		showShot(state, state.shotsFired, result.hit, result.targetIndex, result.impact, result.golden == true)
+		return
+	end
+	if predicted.hit == result.hit and predicted.index == result.targetIndex then
+		return -- предсказание верное, всё уже нарисовано
+	end
+	-- расхождение: верим серверу
+	if predicted.index then
+		state.closed[predicted.index] = nil
+	end
+	if result.targetIndex then
+		state.closed[result.targetIndex] = true
+	end
+	local dot = dots[predicted.shotNo]
 	if dot then
 		dot.BackgroundColor3 = if result.hit then DOT_HIT else DOT_MISS
 	end
 	if result.impact then
 		showImpact(state, result.impact, result.hit)
 	end
-	if result.hit and result.impact then
-		Fx.burst("Confetti", result.impact)
-	end
-	ShotFeedback.onResult(result.hit, result.targetIndex, result.impact, state.eye.Position, state.shotsFired, state.shotsFired + result.shotsLeft, result.golden)
+	local wrong = if predicted.index then state.targets[predicted.index] else nil
+	local right = if result.targetIndex then state.targets[result.targetIndex] else nil
+	ShotFeedback.correct(result.hit, wrong, right, state.eye.Position, state.serverHits, predicted.shotNo, C.ShotsPerStage, result.golden)
 end)
 
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)

@@ -155,8 +155,8 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: {
 			table.insert(lines, string.format("DNF   %s%s", entry.name, accuracy))
 		else
 			local photo = if entry.photoFinish then "   📸" else ""
-			local penalty = if entry.penalty and entry.penalty ~= 0 then string.format(" (%s)", Format.penalty(entry.penalty)) else ""
-			table.insert(lines, string.format("%d.   %s   %s%s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), penalty, accuracy, photo))
+			-- только итоговое время (штраф уже внутри)
+			table.insert(lines, string.format("%d.   %s   %s%s%s", entry.place :: number, entry.name, formatTime(entry.time :: number), accuracy, photo))
 		end
 	end
 	resultsText.Text = table.concat(lines, "\n")

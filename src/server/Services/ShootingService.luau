@@ -334,25 +334,6 @@ local function finishSession(player: Player, session: Session)
 	stageFinishedEvent:Fire(player, session.range.order, hits, misses)
 end
 
--- Точка, где луч пересекает плоскость мишени (ось цилиндра смотрит на стрелка).
-local function rayPlanePoint(origin: Vector3, dir: Vector3, target: BasePart): Vector3?
-	local normal = target.CFrame.RightVector
-	local denom = dir:Dot(normal)
-	if math.abs(denom) < 1e-6 then
-		return nil
-	end
-	local s = (target.Position - origin):Dot(normal) / denom
-	if s <= 0 then
-		return nil
-	end
-	return origin + dir * s
-end
-
-local function rayHitsTarget(origin: Vector3, dir: Vector3, target: BasePart, radius: number): boolean
-	local point = rayPlanePoint(origin, dir, target)
-	return point ~= nil and (point - target.Position).Magnitude <= radius
-end
-
 local function onFireShot(player: Player, shotTime: unknown)
 	local session = sessions[player]
 	if not session or session.finishing or session.shotsLeft <= 0 then
@@ -379,18 +360,13 @@ local function onFireShot(player: Player, shotTime: unknown)
 	local shot = Aim.cframe(session.lane.eye.CFrame, swayYaw, swayPitch)
 
 	local radius = C.TargetDiameter[range.stance] / 2
-	local hitIndex: number? = nil
+	local hitIndex = Aim.findHit(shot.Position, shot.LookVector, session.lane.targets, function(i)
+		return if i == session.golden then radius * R.GoldenSizeMultiplier else radius
+	end)
 	local hitClosed = false
-	for i, target in session.lane.targets do
-		local r = if i == session.golden then radius * R.GoldenSizeMultiplier else radius
-		if rayHitsTarget(shot.Position, shot.LookVector, target, r) then
-			if session.hits[i] then
-				hitClosed = true -- попал в уже закрытую — это промах
-			else
-				hitIndex = i
-			end
-			break
-		end
+	if hitIndex and session.hits[hitIndex] then
+		hitClosed = true -- попал в уже закрытую — это промах
+		hitIndex = nil
 	end
 
 	if hitIndex then
@@ -413,7 +389,7 @@ local function onFireShot(player: Player, shotTime: unknown)
 		hit = hitIndex ~= nil,
 		targetIndex = hitIndex,
 		shotsLeft = session.shotsLeft,
-		impact = if firstTarget then rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
+		impact = if firstTarget then Aim.rayPlanePoint(shot.Position, shot.LookVector, firstTarget) else nil,
 		golden = hitIndex ~= nil and hitIndex == session.golden,
 	}
 	remoteShotResult:FireClient(player, result)
