@@ -23,6 +23,7 @@ local PenaltyService: any
 local PushService: any
 local PodiumService: any
 local SpectatorService: any
+local ModifierService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -263,6 +264,7 @@ local function runLobby()
 		end
 
 		setState("Lobby", LOBBY_WAIT)
+		ModifierService.openVote()
 		local deadline = os.clock() + LOBBY_WAIT
 		local enough = true
 		while os.clock() < deadline do
@@ -281,6 +283,7 @@ local function runLobby()
 		if enough then
 			return
 		end
+		ModifierService.clear() -- лобби сорвалось: голосование заново
 	end
 end
 
@@ -396,6 +399,7 @@ local function runResults()
 	task.wait(duration)
 
 	-- вернуть всех в лобби
+	ModifierService.clear()
 	raceStartedAt = 0
 	table.clear(participants)
 	for _, player in Players:GetPlayers() do
@@ -406,9 +410,12 @@ end
 local function raceLoop()
 	while true do
 		runLobby()
+		ModifierService.decide()
 		if runCountdown() then
 			runRacing()
 			runResults()
+		else
+			ModifierService.clear()
 		end
 	end
 end
@@ -431,6 +438,7 @@ function RaceManager.init(services: { [string]: any })
 	PushService = services.PushService
 	PodiumService = services.PodiumService
 	SpectatorService = services.SpectatorService
+	ModifierService = services.ModifierService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)

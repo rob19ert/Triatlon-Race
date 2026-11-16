@@ -93,6 +93,14 @@ function ThemeService.apply(season: string)
 	log("season %s applied to %d part(s)", season, count)
 end
 
+-- Вернуть свет и атмосферу текущего сезона (после модификатора заезда).
+function ThemeService.restoreLighting()
+	local theme = current and Themes[current]
+	if theme then
+		applyLighting(theme)
+	end
+end
+
 function ThemeService.getSeason(): string?
 	return current
 end

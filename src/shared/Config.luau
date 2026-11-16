@@ -167,6 +167,42 @@ local Config = {
 
 	-- Сезоны: детали окружения с тегом Themed и атрибутом Role красятся по палитре сезона,
 	-- папки Decor/<Сезон> показываются только для текущего сезона. Применяет ThemeService.
+	-- Модификатор заезда: в лобби — голосование за один из Options случайных, действует одну гонку.
+	-- Атмосфера (Fog, Night) переопределяет поля Atmosphere поверх сезона; после гонки сезон возвращается.
+	Modifiers = {
+		Options = 3, -- сколько карточек в лобби
+		Pool = { "Fog", "Night", "LowGravity" }, -- из кого выбирать
+		BannerTime = 2.5, -- с, крупная надпись на отсчёте
+		Defs = {
+			Fog = {
+				icon = "🌫",
+				title = "Туман",
+				desc = "Видно на пару шагов",
+				atmosphere = { density = 0.82, offset = 0.1, haze = 6, glare = 0, color = Color3.fromRGB(205, 210, 216), decay = Color3.fromRGB(185, 190, 198) },
+			},
+			Night = {
+				icon = "🌙",
+				title = "Ночь",
+				desc = "Темно, у всех фары",
+				lighting = {
+					clockTime = 0.5,
+					brightness = 1,
+					ambient = Color3.fromRGB(45, 50, 80),
+					outdoorAmbient = Color3.fromRGB(70, 75, 110),
+				},
+				atmosphere = { density = 0.35, offset = 0, haze = 0.5, glare = 0, color = Color3.fromRGB(40, 45, 80), decay = Color3.fromRGB(20, 22, 45) },
+				headlamp = { range = 60, brightness = 4, angle = 70, glowRange = 14, glowBrightness = 1.2, color = Color3.fromRGB(255, 240, 200) },
+			},
+			LowGravity = {
+				icon = "🎈",
+				title = "Низкая гравитация",
+				desc = "Прыжки до небес",
+				gravity = 80, -- обычная 196.2; полёты с трамплинов и толчков дольше
+				jumpMultiplier = 2, -- высоту прыжка (в стадах) движок держит при любой гравитации — поднимаем сами
+			},
+		},
+	},
+
 	Theme = {
 		Tag = "Themed",
 		RoleAttribute = "Role",
