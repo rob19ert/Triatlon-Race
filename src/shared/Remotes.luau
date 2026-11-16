@@ -26,7 +26,6 @@ local Remotes = {
 		HoldBreath = "HoldBreath", -- ()
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
 		SpectateFocus = "SpectateFocus", -- (targetUserId: number) зритель смотрит за этим гонщиком; 0 — ни за кем
-		DevBikeMode = "DevBikeMode", -- () только Studio: сесть/слезть с велосипеда вне зон
 		DevToFinish = "DevToFinish", -- () только Studio: перенести к финишной линии (тест на нескольких клиентах)
 	},
 }

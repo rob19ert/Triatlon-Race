@@ -1,7 +1,6 @@
 --!strict
 -- Помощники для тестов, работают ТОЛЬКО в Studio (на живых серверах игнорируются).
 -- G — перенести игрока к финишной линии, минуя стрельбы: удобно в тесте на нескольких клиентах.
--- B — сесть/слезть с велосипеда вне зон.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -15,7 +14,6 @@ local DevService = {}
 
 local RaceManager: any
 local StaminaService: any
-local BikeService: any
 local ProgressTracker: any
 local ShootingService: any
 local slot = 0 -- раскладываем по ширине, чтобы не стояли друг в друге
@@ -48,21 +46,11 @@ function DevService.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
-	BikeService = services.BikeService
-end
-
-local function onBikeMode(player: Player)
-	if not RunService:IsStudio() then
-		return
-	end
-	local on = BikeService.toggle(player)
-	print(string.format("[DevService] %s bike mode %s", player.Name, if on then "ON" else "OFF"))
 end
 
 function DevService.start()
 	if RunService:IsStudio() then
 		Remotes.get(Remotes.Names.DevToFinish).OnServerEvent:Connect(onToFinish)
-		Remotes.get(Remotes.Names.DevBikeMode).OnServerEvent:Connect(onBikeMode)
 	end
 end
 

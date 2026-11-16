@@ -209,7 +209,6 @@ local Config = {
 	-- Только Studio: помощники для тестов на нескольких клиентах
 	Dev = {
 		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы
-		BikeModeKey = Enum.KeyCode.B, -- сесть/слезть с велосипеда вне зон (только Studio)
 		ToFinishDistance = 10, -- стад до финишной линии
 		ToFinishSpacing = 4, -- стад между игроками по ширине
 	},
@@ -219,6 +218,8 @@ local Config = {
 		-- велосипед (аркадный: персонаж с повышенной скоростью и прикреплённой моделью)
 		MountTag = "BikeMount", -- зона посадки в велопарке (север)
 		DismountTag = "BikeDismount", -- зона высадки (юг)
+		GateTag = "BikeGate", -- невидимые ворота круга (атрибут Order 1..N, LookVector = по ходу); Order 0 — начало круга
+		SkipNotice = "Сначала проедь круг!", -- въехал в высадку, не пройдя все ворота
 		RideSpeed = 36, -- стад/с, обычная езда (пульс держится ~RunPulse)
 		PedalSpeed = 46, -- стад/с, педали (кнопка спринта; пульс +SprintGainPerSec)
 		CoastRecoveryPerSec = 5, -- спуск без педалей: пульс −5/с

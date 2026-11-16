@@ -1,8 +1,9 @@
 --!strict
 -- Велосипед (аркадный): посадка и высадка, всё на сервере.
 --  * въехал в зону BikeMount на велоэтапе (отстрелял первый рубеж) — сел на велосипед;
---    на всякий случай садим и западнее стадиона, если зону как-то проскочил;
---  * въехал в зону BikeDismount — слез;
+--  * круг: невидимые ворота BikeGate (атрибут Order 1..N) надо пройти по порядку;
+--  * въехал в зону BikeDismount, пройдя все ворота, — слез; не пройдя — назад к последним
+--    пройденным воротам (или к началу круга, Order 0) и сообщение SkipNotice. Срезать круг нельзя.
 --  * на велосипеде: свои скорости и пульс (StaminaService.setBike), прыжок выключен;
 --    модель (клон ServerStorage/BikeTemplate) приварена к HumanoidRootPart, колёса и позу крутят клиенты.
 -- Состояние для клиентов — атрибут Riding на Player.
@@ -15,6 +16,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local C = Config.Bike
 
@@ -26,6 +28,13 @@ local ShootingService: any
 local StaminaService: any
 
 local riding: { [Player]: boolean } = {}
+local noticeRemote: RemoteEvent
+
+-- ворота круга по порядку; gates[0] — начало круга (куда возвращать, если ни одни не пройдены)
+local gates: { [number]: BasePart } = {}
+local lastGateOrder = 0
+-- прогресс по кругу на велоэтапе: следующий номер ворот (lastGateOrder + 1 = круг пройден)
+local nextGate: { [Player]: number } = {}
 -- прыжок до посадки, чтобы вернуть после высадки
 local savedJump: { [Humanoid]: { power: number, height: number } } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -127,11 +136,62 @@ local function setRiding(player: Player, on: boolean, reason: string)
 	log("%s %s (%s)", player.Name, if on then "mounted" else "dismounted", reason)
 end
 
+---------------------------------------------------------------- круг
+
+local function loadGates()
+	for _, part in CollectionService:GetTagged(C.GateTag) do
+		local order = part:GetAttribute("Order")
+		if part:IsA("BasePart") and typeof(order) == "number" then
+			if gates[order] then
+				warn(string.format("[BikeService] duplicate BikeGate Order %d", order))
+			end
+			gates[order] = part
+			lastGateOrder = math.max(lastGateOrder, order)
+		end
+	end
+	for order = 0, lastGateOrder do
+		if not gates[order] then
+			warn(string.format("[BikeService] BikeGate Order %d missing", order))
+		end
+	end
+end
+
+local function updateGates(player: Player, position: Vector3)
+	local order = nextGate[player] or 1
+	local gate = gates[order]
+	if gate and isInside(gate, position) then
+		nextGate[player] = order + 1
+		log("%s passed gate %d/%d", player.Name, order, lastGateOrder)
+	end
+end
+
+local function loopDone(player: Player): boolean
+	return (nextGate[player] or 1) > lastGateOrder
+end
+
+-- Срезал круг: назад к последним пройденным воротам, лицом по ходу.
+local function sendBack(player: Player, character: Model, root: BasePart)
+	local gate = gates[(nextGate[player] or 1) - 1] or gates[0]
+	if not gate then
+		return
+	end
+	local forward = gate.CFrame.LookVector * Vector3.new(1, 0, 1)
+	local base = gate.Position - Vector3.new(0, gate.Size.Y / 2, 0)
+	local pos = Vector3.new(base.X, base.Y + Config.Track.RespawnHeight, base.Z)
+	root.AssemblyLinearVelocity = Vector3.zero
+	character:PivotTo(CFrame.lookAt(pos, pos + forward.Unit))
+	noticeRemote:FireClient(player, C.SkipNotice)
+	log("%s skipped the loop -> back to gate %d", player.Name, (nextGate[player] or 1) - 1)
+end
+
 local function step()
 	local racing = RaceManager.getState() == "Racing"
 	for _, player in Players:GetPlayers() do
 		local tracked = racing and RaceManager.isParticipant(player) and ProgressTracker.isTracked(player)
 		local stages = if tracked then ShootingService.getCompletedStages(player) else 0
+		if not tracked or stages ~= 1 then
+			nextGate[player] = nil
+		end
 		if riding[player] and (not tracked or stages >= 2) then
 			setRiding(player, false, if not tracked then "not racing" else "stage done")
 			continue
@@ -142,19 +202,24 @@ local function step()
 		if not tracked or not root or not humanoid or humanoid.Health <= 0 then
 			continue
 		end
-		if riding[player] then
+		if stages ~= 1 or ShootingService.isShooting(player) then
+			continue
+		end
+		updateGates(player, root.Position)
+		if inTagged(C.DismountTag, root.Position) then
+			-- и пешком без круга (как-то обошёл посадку) дальше не пускаем
+			if not loopDone(player) then
+				sendBack(player, character :: Model, root)
+			elseif riding[player] then
+				setRiding(player, false, "dismount zone")
+			end
+		elseif riding[player] then
 			-- новый персонаж (респавн) — снова без прыжка и с велосипедом
 			setJumpEnabled(humanoid, false)
 			attachBike(player, character :: Model)
-			if inTagged(C.DismountTag, root.Position) then
-				setRiding(player, false, "dismount zone")
-			end
-		elseif stages == 1 and not ShootingService.isShooting(player) then
-			if inTagged(C.MountTag, root.Position) then
-				setRiding(player, true, "mount zone")
-			elseif root.Position.X < C.StadiumEdgeX then
-				setRiding(player, true, "west of stadium")
-			end
+		elseif inTagged(C.MountTag, root.Position) and not loopDone(player) then
+			nextGate[player] = 1
+			setRiding(player, true, "mount zone")
 		end
 	end
 end
@@ -163,25 +228,23 @@ function BikeService.isRiding(player: Player): boolean
 	return riding[player] == true
 end
 
--- Только для дев-команды: сесть / слезть вне зон.
-function BikeService.toggle(player: Player): boolean
-	setRiding(player, not riding[player], "dev")
-	return riding[player] == true
-end
-
 function BikeService.init(services: { [string]: any })
 	RaceManager = services.RaceManager
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
+	noticeRemote = Remotes.get(Remotes.Names.Notice)
 end
 
 function BikeService.start()
 	if not template then
 		warn("[BikeService] ServerStorage." .. C.TemplateName .. " not found — riding without a bike model")
 	end
+	loadGates()
+	log("%d loop gate(s)", lastGateOrder)
 	Players.PlayerRemoving:Connect(function(player)
 		riding[player] = nil
+		nextGate[player] = nil
 	end)
 	RunService.Heartbeat:Connect(step)
 end
