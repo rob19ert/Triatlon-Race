@@ -224,6 +224,28 @@ local Config = {
 		CoastRecoveryPerSec = 5, -- спуск без педалей: пульс −5/с
 		CoastMinDropSpeed = 3, -- стад/с вниз: быстрее — считаем, что катится под горку
 		ShoulderSpeedMultiplier = 0.6, -- за краем дороги (обочина, до OffRoadMargin): −40%
+		-- модель и поза (шаблон ServerStorage/BikeTemplate: Root у земли между колёсами, вперёд = −Z;
+		-- моторы FrontWheelMotor / RearWheelMotor / CrankMotor; детали с атрибутом Paint красятся в цвет игрока)
+		TemplateName = "BikeTemplate",
+		ModelName = "Bike", -- имя клона внутри персонажа
+		Colors = { -- цвет рамы: по UserId игрока
+			Color3.fromRGB(235, 60, 60),
+			Color3.fromRGB(40, 140, 255),
+			Color3.fromRGB(60, 200, 90),
+			Color3.fromRGB(255, 170, 30),
+			Color3.fromRGB(170, 80, 230),
+			Color3.fromRGB(255, 95, 180),
+			Color3.fromRGB(30, 200, 200),
+			Color3.fromRGB(250, 220, 40),
+		},
+		WheelRadius = 1.3, -- стад, для скорости вращения колёс
+		CrankTurnsPerStud = 0.12, -- оборотов педалей на стад пути
+		PoseLeanDeg = 18, -- наклон корпуса вперёд
+		PoseArmsDeg = 62, -- руки вперёд к рулю
+		PoseHipDeg = 38, -- бедро вперёд (средняя точка)
+		PoseHipSwingDeg = 22, -- размах бедра при педалировании
+		PoseKneeDeg = 55, -- сгиб колена (средняя точка)
+		PoseKneeSwingDeg = 30,
 		RoadTag = "BikeRoad", -- куски дороги петли (отрезки Seg — по центральной линии, атрибут Width)
 		LaunchTag = "LaunchPad", -- зона на верхнем крае трамплина
 		BoostTag = "BoostPad", -- светящаяся полоса-ускоритель

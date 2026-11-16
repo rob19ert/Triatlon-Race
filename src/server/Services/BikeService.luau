@@ -3,13 +3,15 @@
 --  * въехал в зону BikeMount на велоэтапе (отстрелял первый рубеж) — сел на велосипед;
 --    на всякий случай садим и западнее стадиона, если зону как-то проскочил;
 --  * въехал в зону BikeDismount — слез;
---  * на велосипеде: свои скорости и пульс (StaminaService.setBike), прыжок выключен.
+--  * на велосипеде: свои скорости и пульс (StaminaService.setBike), прыжок выключен;
+--    модель (клон ServerStorage/BikeTemplate) приварена к HumanoidRootPart, колёса и позу крутят клиенты.
 -- Состояние для клиентов — атрибут Riding на Player.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
@@ -66,7 +68,47 @@ local function setJumpEnabled(humanoid: Humanoid, enabled: boolean)
 	end
 end
 
-local function setRiding(player: Player, on: boolean)
+---------------------------------------------------------------- модель
+
+local template = ServerStorage:FindFirstChild(C.TemplateName) :: Model?
+
+local function detachBike(character: Model?)
+	local bike = character and character:FindFirstChild(C.ModelName)
+	if bike then
+		bike:Destroy()
+	end
+end
+
+-- Велосипед под персонажем: Root шаблона — у земли, поэтому опускаем на высоту бёдер + половину корня.
+local function attachBike(player: Player, character: Model)
+	if not template or character:FindFirstChild(C.ModelName) then
+		return
+	end
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid then
+		return
+	end
+	local bike = template:Clone()
+	bike.Name = C.ModelName
+	local color = C.Colors[player.UserId % #C.Colors + 1]
+	for _, part in bike:GetDescendants() do
+		if part:IsA("BasePart") and part:GetAttribute("Paint") == true then
+			part.Color = color
+		end
+	end
+	local bikeRoot = bike.PrimaryPart :: BasePart
+	local offset = CFrame.new(0, -(humanoid.HipHeight + root.Size.Y / 2), 0)
+	bike:PivotTo(root.CFrame * offset)
+	local weld = Instance.new("Weld")
+	weld.Part0 = root
+	weld.Part1 = bikeRoot
+	weld.C0 = offset
+	weld.Parent = bikeRoot
+	bike.Parent = character
+end
+
+local function setRiding(player: Player, on: boolean, reason: string)
 	if (riding[player] == true) == on then
 		return
 	end
@@ -77,7 +119,12 @@ local function setRiding(player: Player, on: boolean)
 	if humanoid then
 		setJumpEnabled(humanoid, not on)
 	end
-	log("%s %s", player.Name, if on then "mounted" else "dismounted")
+	if on and player.Character then
+		attachBike(player, player.Character)
+	else
+		detachBike(player.Character)
+	end
+	log("%s %s (%s)", player.Name, if on then "mounted" else "dismounted", reason)
 end
 
 local function step()
@@ -86,7 +133,7 @@ local function step()
 		local tracked = racing and RaceManager.isParticipant(player) and ProgressTracker.isTracked(player)
 		local stages = if tracked then ShootingService.getCompletedStages(player) else 0
 		if riding[player] and (not tracked or stages >= 2) then
-			setRiding(player, false)
+			setRiding(player, false, if not tracked then "not racing" else "stage done")
 			continue
 		end
 		local character = player.Character
@@ -96,14 +143,17 @@ local function step()
 			continue
 		end
 		if riding[player] then
-			-- новый персонаж (респавн) — снова без прыжка
+			-- новый персонаж (респавн) — снова без прыжка и с велосипедом
 			setJumpEnabled(humanoid, false)
+			attachBike(player, character :: Model)
 			if inTagged(C.DismountTag, root.Position) then
-				setRiding(player, false)
+				setRiding(player, false, "dismount zone")
 			end
 		elseif stages == 1 and not ShootingService.isShooting(player) then
-			if inTagged(C.MountTag, root.Position) or root.Position.X < C.StadiumEdgeX then
-				setRiding(player, true)
+			if inTagged(C.MountTag, root.Position) then
+				setRiding(player, true, "mount zone")
+			elseif root.Position.X < C.StadiumEdgeX then
+				setRiding(player, true, "west of stadium")
 			end
 		end
 	end
@@ -115,7 +165,7 @@ end
 
 -- Только для дев-команды: сесть / слезть вне зон.
 function BikeService.toggle(player: Player): boolean
-	setRiding(player, not riding[player])
+	setRiding(player, not riding[player], "dev")
 	return riding[player] == true
 end
 
@@ -127,6 +177,9 @@ function BikeService.init(services: { [string]: any })
 end
 
 function BikeService.start()
+	if not template then
+		warn("[BikeService] ServerStorage." .. C.TemplateName .. " not found — riding without a bike model")
+	end
 	Players.PlayerRemoving:Connect(function(player)
 		riding[player] = nil
 	end)
