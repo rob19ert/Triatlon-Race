@@ -12,5 +12,6 @@ return {
 	RangeOrder = "RangeOrder", -- number, на каком стрельбище сейчас стреляет (nil — не стреляет)
 	RangeMarks = "RangeMarks", -- string, выстрелы этой стрельбы: "H" попал, "M" промах (напр. "HHM")
 	TurboUntil = "TurboUntil", -- number, server time конца турбо (5/5 на рубеже)
+	LoopRiding = "LoopRiding", -- boolean, едет по петле (закреплён, двигают клиенты)
 	PushReadyAt = "PushReadyAt", -- number, server time, когда снова можно толкать (nil — толчок недоступен, не в гонке)
 }

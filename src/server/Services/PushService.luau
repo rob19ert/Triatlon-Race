@@ -55,8 +55,8 @@ local function canPushOrBePushed(player: Player): boolean
 	if not racers[player] or not ProgressTracker.isTracked(player) then
 		return false
 	end
-	if ShootingService.isShooting(player) then
-		return false
+	if ShootingService.isShooting(player) or player:GetAttribute(Attributes.LoopRiding) == true then
+		return false -- на рубеже и на петле толкать нельзя
 	end
 	return true -- на финишной прямой толкаться можно (решено 14.11.2026)
 end
