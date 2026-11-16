@@ -20,6 +20,7 @@ local SERVICE_ORDER = {
 	"PodiumService",
 	"SpectatorService",
 	"BikeTrackService",
+	"BikeService",
 	"DevService",
 	"RaceManager",
 }

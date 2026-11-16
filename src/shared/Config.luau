@@ -209,14 +209,21 @@ local Config = {
 	-- Только Studio: помощники для тестов на нескольких клиентах
 	Dev = {
 		ToFinishKey = Enum.KeyCode.G, -- перенести к финишу, минуя стрельбы
-		BikeModeKey = Enum.KeyCode.B, -- вкл/выкл скорость велосипеда (проверка петли до велосипеда)
-		BikeModeSpeed = 40,
+		BikeModeKey = Enum.KeyCode.B, -- сесть/слезть с велосипеда вне зон (только Studio)
 		ToFinishDistance = 10, -- стад до финишной линии
 		ToFinishSpacing = 4, -- стад между игроками по ширине
 	},
 
 	-- Велопетля (фаза 2): трамплины, ускорители, возврат на дорогу
 	Bike = {
+		-- велосипед (аркадный: персонаж с повышенной скоростью и прикреплённой моделью)
+		MountTag = "BikeMount", -- зона посадки в велопарке (север)
+		DismountTag = "BikeDismount", -- зона высадки (юг)
+		RideSpeed = 36, -- стад/с, обычная езда (пульс держится ~RunPulse)
+		PedalSpeed = 46, -- стад/с, педали (кнопка спринта; пульс +SprintGainPerSec)
+		CoastRecoveryPerSec = 5, -- спуск без педалей: пульс −5/с
+		CoastMinDropSpeed = 3, -- стад/с вниз: быстрее — считаем, что катится под горку
+		ShoulderSpeedMultiplier = 0.6, -- за краем дороги (обочина, до OffRoadMargin): −40%
 		RoadTag = "BikeRoad", -- куски дороги петли (отрезки Seg — по центральной линии, атрибут Width)
 		LaunchTag = "LaunchPad", -- зона на верхнем крае трамплина
 		BoostTag = "BoostPad", -- светящаяся полоса-ускоритель

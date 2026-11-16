@@ -24,7 +24,8 @@ type PlayerStamina = {
 	ignoreRedZonePenalty: boolean, -- финишная прямая: красная зона не замедляет
 	recoveryMultiplier: number, -- догонялка: >1 у отстающих
 	turboUntil: number, -- os.clock() конца турбо (5/5 на рубеже)
-	speedOverride: number?, -- базовая скорость вместо бега (велосипед; в Studio — режим велосипеда)
+	bike: boolean, -- едет на велосипеде: свои скорости, педали вместо спринта, отдых на спуске
+	terrainMultiplier: number, -- обочина на велосипеде (<1), иначе 1
 	boostUntil: number, -- os.clock() конца ускорителя
 	boostMultiplier: number,
 	lastVelY: number,
@@ -109,8 +110,13 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 
 	st.sprinting = st.wantsSprint and moving and not st.redZone
 
+	-- велосипед: спуск без педалей — отдых
+	local coasting = st.bike and moving and not st.sprinting and velocity.Y < -Config.Bike.CoastMinDropSpeed
+
 	if st.sprinting then
 		addPulse(st, S.SprintGainPerSec * dt)
+	elseif coasting then
+		addPulse(st, -Config.Bike.CoastRecoveryPerSec * st.recoveryMultiplier * dt)
 	elseif moving then
 		-- снижение пульса к RunPulse — это восстановление, оно ускоряется догонялкой
 		local rate = if st.pulse > S.RunPulse then S.RunDriftPerSec * st.recoveryMultiplier else S.RunDriftPerSec
@@ -120,8 +126,8 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	end
 
 	local speed = if st.sprinting then Config.Movement.SprintSpeed else Config.Movement.WalkSpeed
-	if st.speedOverride then
-		speed = st.speedOverride
+	if st.bike then
+		speed = (if st.sprinting then Config.Bike.PedalSpeed else Config.Bike.RideSpeed) * st.terrainMultiplier
 	end
 	if st.redZone and not st.ignoreRedZonePenalty then
 		speed *= S.RedZoneSpeedMultiplier
@@ -177,6 +183,8 @@ function StaminaService.beginRace(players: { Player })
 			turboUntil = 0,
 			boostUntil = 0,
 			boostMultiplier = 1,
+			bike = false,
+			terrainMultiplier = 1,
 			lastVelY = 0,
 			publishedPulse = nil,
 		}
@@ -209,17 +217,21 @@ function StaminaService.isRedZone(player: Player): boolean
 	return st ~= nil and st.redZone
 end
 
--- Базовая скорость вместо бега (nil — обычный бег). Множители красной зоны и турбо действуют поверх.
-function StaminaService.setSpeedOverride(player: Player, speed: number?)
+-- Велосипед: свои скорости (езда / педали), отдых на спуске без педалей.
+function StaminaService.setBike(player: Player, on: boolean)
 	local st = active[player]
 	if st then
-		st.speedOverride = speed
+		st.bike = on
+		st.terrainMultiplier = 1
 	end
 end
 
-function StaminaService.getSpeedOverride(player: Player): number?
+-- Множитель скорости велосипеда от покрытия (обочина < 1). Без велосипеда не действует.
+function StaminaService.setTerrainMultiplier(player: Player, multiplier: number)
 	local st = active[player]
-	return st and st.speedOverride
+	if st then
+		st.terrainMultiplier = multiplier
+	end
 end
 
 -- Ускоритель на дороге: скорость ×multiplier на seconds (продлевается при повторном заезде).

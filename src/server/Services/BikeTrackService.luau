@@ -121,7 +121,12 @@ local function inAnyFallZone(position: Vector3): boolean
 end
 
 local function checkOffRoad(player: Player, character: Model, humanoid: Humanoid, root: BasePart, now: number)
-	if root.Position.X > C.StadiumEdgeX or humanoid.FloorMaterial == Enum.Material.Air or inAnyFallZone(root.Position) then
+	if root.Position.X > C.StadiumEdgeX then
+		offRoadSince[player] = nil
+		StaminaService.setTerrainMultiplier(player, 1)
+		return
+	end
+	if humanoid.FloorMaterial == Enum.Material.Air or inAnyFallZone(root.Position) then
 		offRoadSince[player] = nil
 		return
 	end
@@ -129,6 +134,8 @@ local function checkOffRoad(player: Player, character: Model, humanoid: Humanoid
 	if not point or not seg then
 		return
 	end
+	-- обочина (за краем, но в пределах OffRoadMargin) — велосипед медленнее
+	StaminaService.setTerrainMultiplier(player, if score <= seg.halfWidth then 1 else C.ShoulderSpeedMultiplier)
 	if score <= seg.halfWidth + C.OffRoadMargin then
 		offRoadSince[player] = nil
 		return
@@ -143,6 +150,7 @@ local function checkOffRoad(player: Player, character: Model, humanoid: Humanoid
 	end
 	-- на центр дороги в ближайшей точке, лицом по ходу движения
 	offRoadSince[player] = nil
+	StaminaService.setTerrainMultiplier(player, 1)
 	local forward = (seg.b - seg.a) * Vector3.new(1, 0, 1)
 	forward = if forward.Magnitude > 1e-3 then forward.Unit else root.CFrame.LookVector
 	local pos = point + Vector3.new(0, Config.Track.RespawnHeight, 0)
