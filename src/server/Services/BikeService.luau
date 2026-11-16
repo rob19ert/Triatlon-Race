@@ -4,7 +4,7 @@
 --  * круг: невидимые ворота BikeGate (атрибут Order 1..N) надо пройти по порядку;
 --  * въехал в зону BikeDismount, пройдя все ворота, — слез; не пройдя — назад к последним
 --    пройденным воротам (или к началу круга, Order 0) и сообщение SkipNotice. Срезать круг нельзя.
---  * на велосипеде: свои скорости и пульс (StaminaService.setBike), прыжок выключен;
+--  * на велосипеде: свои скорости и пульс (StaminaService.setBike), прыгать можно;
 --    модель (клон ServerStorage/BikeTemplate) приварена к HumanoidRootPart, колёса и позу крутят клиенты.
 -- Состояние для клиентов — атрибут Riding на Player.
 
@@ -35,8 +35,6 @@ local gates: { [number]: BasePart } = {}
 local lastGateOrder = 0
 -- прогресс по кругу на велоэтапе: следующий номер ворот (lastGateOrder + 1 = круг пройден)
 local nextGate: { [Player]: number } = {}
--- прыжок до посадки, чтобы вернуть после высадки
-local savedJump: { [Humanoid]: { power: number, height: number } } = setmetatable({}, { __mode = "k" }) :: any
 
 local function log(fmt: string, ...: any)
 	print("[BikeService] " .. string.format(fmt, ...))
@@ -60,21 +58,6 @@ end
 local function getHumanoid(player: Player): Humanoid?
 	local character = player.Character
 	return character and character:FindFirstChildOfClass("Humanoid")
-end
-
-local function setJumpEnabled(humanoid: Humanoid, enabled: boolean)
-	if enabled then
-		local saved = savedJump[humanoid]
-		if saved then
-			humanoid.JumpPower = saved.power
-			humanoid.JumpHeight = saved.height
-			savedJump[humanoid] = nil
-		end
-	elseif not savedJump[humanoid] then
-		savedJump[humanoid] = { power = humanoid.JumpPower, height = humanoid.JumpHeight }
-		humanoid.JumpPower = 0
-		humanoid.JumpHeight = 0
-	end
 end
 
 ---------------------------------------------------------------- модель
@@ -124,10 +107,6 @@ local function setRiding(player: Player, on: boolean, reason: string)
 	riding[player] = if on then true else nil
 	player:SetAttribute(Attributes.Riding, if on then true else nil)
 	StaminaService.setBike(player, on)
-	local humanoid = getHumanoid(player)
-	if humanoid then
-		setJumpEnabled(humanoid, not on)
-	end
 	if on and player.Character then
 		attachBike(player, player.Character)
 	else
@@ -214,8 +193,7 @@ local function step()
 				setRiding(player, false, "dismount zone")
 			end
 		elseif riding[player] then
-			-- новый персонаж (респавн) — снова без прыжка и с велосипедом
-			setJumpEnabled(humanoid, false)
+			-- новый персонаж (респавн) — снова с велосипедом
 			attachBike(player, character :: Model)
 		elseif inTagged(C.MountTag, root.Position) and not loopDone(player) then
 			nextGate[player] = 1

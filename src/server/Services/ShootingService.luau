@@ -94,6 +94,13 @@ local function isInside(zone: BasePart, position: Vector3): boolean
 	return math.abs(localPos.X) <= half.X and math.abs(localPos.Y) <= half.Y and math.abs(localPos.Z) <= half.Z
 end
 
+-- Вход на рубеж — «колонна»: над зоной тоже считается (высокий прыжок, низкая гравитация).
+local function isOverEntry(zone: BasePart, position: Vector3): boolean
+	local localPos = zone.CFrame:PointToObjectSpace(position)
+	local half = zone.Size / 2
+	return math.abs(localPos.X) <= half.X and math.abs(localPos.Z) <= half.Z and localPos.Y >= -half.Y
+end
+
 local function getRoot(player: Player): BasePart?
 	local character = player.Character
 	return if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
@@ -439,7 +446,7 @@ local function step()
 		end
 		for _, range in ranges do
 			local done = results[player] and results[player][range.order]
-			if not done and isInside(range.entry, root.Position) then
+			if not done and isOverEntry(range.entry, root.Position) then
 				startSession(player, range, root)
 				break
 			end

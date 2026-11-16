@@ -187,7 +187,7 @@ local function updateBreathLabel(t: number)
 	elseif TouchButtons.isTouch() then
 		breathLabel.Text = "«Огонь» — когда мушка на мишени • «Дыхание» — замедлить"
 	else
-		breathLabel.Text = "ЛКМ — выстрел, когда мушка на мишени • ПКМ — задержать дыхание"
+		breathLabel.Text = "ЛКМ / Пробел — выстрел, когда мушка на мишени • ПКМ — задержать дыхание"
 	end
 end
 
@@ -384,7 +384,8 @@ local function enterAim(payload: Types.ShootingStartPayload)
 	ShotFeedback.reset()
 	gui.Enabled = true
 
-	ContextActionService:BindAction(ACTION_FIRE, onFireAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2)
+	-- пробел тоже стреляет: на рубеже персонаж закреплён, прыгать незачем
+	ContextActionService:BindAction(ACTION_FIRE, onFireAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.Space, Enum.KeyCode.ButtonR2)
 	ContextActionService:BindAction(ACTION_BREATH, onBreathAction, false, Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2)
 
 	-- тач: на месте кнопок бега — «Огонь» (крупная) и «Дыхание»
