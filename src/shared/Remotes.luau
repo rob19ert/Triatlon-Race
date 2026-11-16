@@ -18,7 +18,6 @@ local Remotes = {
 		Notice = "Notice", -- (text: string) короткое сообщение игроку в ленту событий
 		Standings = "Standings", -- {Types.StandingEntry} таблица позиций во время гонки
 		PushFx = "PushFx", -- (pusherUserId: number, targetUserId: number) анимация толчка у всех; target 0 — мимо
-		LoopRide = "LoopRide", -- (userId, startServerTime, duration, origin: CFrame) велосипедист едет по петле у всех
 		KnockedDown = "KnockedDown", -- (duration: number) сбили препятствием — упасть и встать (только сбитому)
 
 		-- клиент -> сервер (намерения, сервер проверяет)

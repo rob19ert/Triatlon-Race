@@ -20,7 +20,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local Knockback = require(script.Parent.Parent.Lib.Knockback)
 
 local C = Config.Bike
@@ -221,7 +220,7 @@ local function step()
 	end
 	local now = os.clock()
 	for _, player in Players:GetPlayers() do
-		if not onBikeStage(player) or player:GetAttribute(Attributes.LoopRiding) == true then
+		if not onBikeStage(player) then
 			offRoadSince[player] = nil
 			continue
 		end
