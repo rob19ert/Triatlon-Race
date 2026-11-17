@@ -1,6 +1,6 @@
 --!strict
 -- Турбо после чистой стрельбы (5/5) — только картинка, скорость даёт сервер:
---  * у себя: надпись «🔥 ТУРБО 5.2» и чуть шире поле зрения;
+--  * у себя: надпись «🔥 ТУРБО 5.2»;
 --  * у всех, кто в турбо (видно всем): огненный шлейф за персонажем.
 -- Данные — атрибут TurboUntil (server time) на игроке.
 
@@ -9,10 +9,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared:WaitForChild("Config"))
 local Attributes = require(Shared:WaitForChild("Attributes"))
 
-local R = Config.Reward
 local player = Players.LocalPlayer
 
 local function turboLeft(p: Player): number
@@ -78,11 +76,9 @@ local function trailFor(p: Player): Trail?
 end
 
 ---------------------------------------------------------------- каждый кадр
+-- (обзор шире на скорости — SpeedFx, в турбо он расширяется сам)
 
-local baseFov: number? = nil
-local fovBoost = 0
-
-RunService.RenderStepped:Connect(function(dt)
+RunService.RenderStepped:Connect(function()
 	-- шлейфы
 	for _, p in Players:GetPlayers() do
 		local active = turboLeft(p) > 0
@@ -93,29 +89,10 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 	end
 
-	-- своё турбо: надпись и поле зрения
+	-- своё турбо: надпись
 	local left = turboLeft(player)
 	gui.Enabled = left > 0
 	if left > 0 then
 		label.Text = string.format("🔥 ТУРБО %.1f", left)
 	end
-	local camera = workspace.CurrentCamera
-	if camera.CameraType ~= Enum.CameraType.Custom then
-		baseFov = nil -- прицел/подиум управляют FOV сами
-		fovBoost = 0
-		return
-	end
-	local target = if left > 0 then R.TurboFov else 0
-	fovBoost += (target - fovBoost) * math.clamp(dt * 5, 0, 1)
-	if not baseFov then
-		baseFov = camera.FieldOfView
-	end
-	if math.abs(fovBoost) < 0.01 and target == 0 then
-		if camera.FieldOfView ~= baseFov then
-			camera.FieldOfView = baseFov :: number
-		end
-		baseFov = nil -- в покое FOV не трогаем (его может менять кто-то ещё)
-		return
-	end
-	camera.FieldOfView = (baseFov :: number) + fovBoost
 end)
