@@ -48,6 +48,19 @@ local function applyLighting(theme: Themes.Theme)
 		atmosphere = Instance.new("Atmosphere")
 		atmosphere.Parent = Lighting
 	end
+	local cc = Lighting:FindFirstChild("SeasonColor")
+	if not cc then
+		cc = Instance.new("ColorCorrectionEffect")
+		cc.Name = "SeasonColor"
+		cc.Parent = Lighting
+	end
+	local c = theme.colorCorrection
+	local cce = cc :: ColorCorrectionEffect
+	cce.Brightness = c.brightness
+	cce.Contrast = c.contrast
+	cce.Saturation = c.saturation
+	cce.TintColor = c.tint
+
 	local a = theme.atmosphere
 	local atm = atmosphere :: Atmosphere
 	atm.Density = a.density
@@ -75,6 +88,23 @@ local function applyDecor(season: string)
 	end
 end
 
+-- Рельеф и облака сезона.
+local function applyTerrain(theme: Themes.Theme)
+	local terrain = workspace.Terrain
+	for material, color in theme.terrain do
+		terrain:SetMaterialColor(material, color)
+	end
+	local clouds = terrain:FindFirstChildOfClass("Clouds")
+	if not clouds then
+		clouds = Instance.new("Clouds")
+		clouds.Parent = terrain
+	end
+	local cl = clouds :: Clouds
+	cl.Cover = theme.clouds.cover
+	cl.Density = theme.clouds.density
+	cl.Color = theme.clouds.color
+end
+
 function ThemeService.apply(season: string)
 	local theme = Themes[season]
 	if not theme then
@@ -88,6 +118,7 @@ function ThemeService.apply(season: string)
 		count += 1
 	end
 	applyLighting(theme)
+	applyTerrain(theme)
 	applyDecor(season)
 	workspace:SetAttribute("Season", season)
 	log("season %s applied to %d part(s)", season, count)

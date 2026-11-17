@@ -22,6 +22,12 @@ export type Theme = {
 		glare: number,
 		haze: number,
 	},
+	-- рельеф (Terrain): цвет материалов
+	terrain: { [Enum.Material]: Color3 },
+	-- цветокоррекция кадра: сочнее и контрастнее
+	colorCorrection: { brightness: number, contrast: number, saturation: number, tint: Color3 },
+	-- облака на небе (Terrain.Clouds)
+	clouds: { cover: number, density: number, color: Color3 },
 }
 
 local rgb = Color3.fromRGB
@@ -59,6 +65,13 @@ local Themes: { [string]: Theme } = {
 			glare = 0.2,
 			haze = 1,
 		},
+		terrain = {
+			[Enum.Material.Grass] = rgb(106, 190, 70),
+			[Enum.Material.LeafyGrass] = rgb(100, 182, 66), -- у трассы (без травинок) и пятна вдали
+			[Enum.Material.Ground] = rgb(150, 115, 75),
+		},
+		colorCorrection = { brightness = 0.02, contrast = 0.12, saturation = 0.15, tint = rgb(255, 250, 242) },
+		clouds = { cover = 0.55, density = 0.6, color = rgb(255, 255, 255) },
 	},
 }
 
