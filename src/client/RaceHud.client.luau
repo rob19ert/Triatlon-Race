@@ -12,6 +12,7 @@ local Attributes = require(ReplicatedStorage.Shared:WaitForChild("Attributes"))
 local Format = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Format"))
 local Config = require(ReplicatedStorage.Shared:WaitForChild("Config"))
 
+local H = Config.RaceHud
 local player = Players.LocalPlayer
 
 local current: Types.RaceStatePayload = { state = "Lobby", endsAt = 0, raceStartedAt = 0 }
@@ -40,6 +41,8 @@ status.Parent = gui
 Instance.new("UICorner", status)
 local statusLimit = Instance.new("UISizeConstraint")
 statusLimit.MaxSize = Vector2.new(360, 48)
+local textLimit = Instance.new("UITextSizeConstraint")
+textLimit.Parent = status
 statusLimit.Parent = status
 
 -- лента событий (итоги стрельбы)
@@ -108,6 +111,11 @@ end
 
 local function render()
 	local s = current.state
+	local racing = s == "Racing"
+	status.AnchorPoint = if racing then Vector2.new(1, 0) else Vector2.new(0.5, 0)
+	status.Position = if racing then UDim2.new(1, -H.RightMargin, 0, H.TimerTop) else UDim2.new(0.5, 0, 0, 8)
+	status.Size = if racing then UDim2.fromOffset(H.TimerWidth, H.TimerHeight) else UDim2.new(0.6, 0, 0, 48)
+	textLimit.MaxTextSize = if racing then H.TimerTextSize else 48
 	if s == "Lobby" then
 		if current.endsAt > 0 then
 			status.Text = string.format("Старт через %d", math.ceil(remaining()))

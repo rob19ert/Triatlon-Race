@@ -32,10 +32,12 @@ gui.Name = "StandingsHud"
 gui.ResetOnSpawn = false
 gui.Enabled = false
 
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(1, 0)
-panel.Position = UDim2.new(1, -8, 0, 8)
+panel.Position = UDim2.new(1, -Config.RaceHud.RightMargin, 0, Config.RaceHud.StandingsTop)
 panel.Size = UDim2.fromOffset(200, 0)
 panel.AutomaticSize = Enum.AutomaticSize.Y
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)

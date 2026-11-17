@@ -182,9 +182,9 @@ bannerDesc.TextStrokeTransparency = 0.4
 
 local badge = Instance.new("TextLabel")
 badge.Name = "Badge"
-badge.AnchorPoint = Vector2.new(0.5, 0)
-badge.Position = UDim2.new(0.5, 0, 0, 62)
-badge.Size = UDim2.fromOffset(0, 26)
+badge.AnchorPoint = Vector2.new(1, 0)
+badge.Position = UDim2.new(1, -Config.RaceHud.RightMargin, 0, Config.RaceHud.ModeTop)
+badge.Size = UDim2.fromOffset(0, Config.RaceHud.ModeHeight)
 badge.AutomaticSize = Enum.AutomaticSize.X
 badge.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 badge.BackgroundTransparency = 0.35

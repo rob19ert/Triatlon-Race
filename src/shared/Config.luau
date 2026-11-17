@@ -2,6 +2,17 @@
 -- Все игровые числа в одном месте. Это стартовые значения — крутим здесь, не в коде.
 
 local Config = {
+	RaceHud = {
+		RightMargin = 8,
+		TimerTop = 8,
+		TimerWidth = 220,
+		TimerHeight = 28,
+		TimerTextSize = 19,
+		ModeTop = 40,
+		ModeHeight = 22,
+		StandingsTop = 68,
+	},
+
 	Race = {
 		MinPlayers = 1, -- гонка стартует по таймеру лобби с любым числом игроков
 		MaxPlayers = 12, -- при полном составе старт сразу, без ожидания
