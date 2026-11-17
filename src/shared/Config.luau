@@ -2,6 +2,18 @@
 -- Все игровые числа в одном месте. Это стартовые значения — крутим здесь, не в коде.
 
 local Config = {
+	Cosmetics = {
+		SelectionCooldown = 1,
+		BikeSkins = {
+			{ id = "auto", title = "Цвет гонщика", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0 },
+			{ id = "ice", title = "Ледник", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0 },
+			{ id = "ember", title = "Уголёк", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 0 },
+			{ id = "lime", title = "Лайм", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 0 },
+			{ id = "violet", title = "Сирень", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 0 },
+			{ id = "gold", title = "Золото", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 0 },
+		},
+	},
+
 	Profile = {
 		StoreName = "RaceProfiles_v1",
 		UseStudioDataStore = false, -- true: отдельное тестовое хранилище Studio

@@ -3,6 +3,8 @@
 -- Пишет только сервер, клиент только читает.
 
 return {
+	BikeSkin = "BikeSkin",
+	OwnedBikeSkins = "OwnedBikeSkins",
 	ProfileLoadFailed = "ProfileLoadFailed",
 	ProfileFinishes = "ProfileFinishes",
 	ProfileXP = "ProfileXP",

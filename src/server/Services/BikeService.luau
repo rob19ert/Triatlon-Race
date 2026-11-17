@@ -82,6 +82,13 @@ local function attachBike(player: Player, character: Model)
 	local bike = template:Clone()
 	bike.Name = C.ModelName
 	local color = C.Colors[player.UserId % #C.Colors + 1]
+	local selected = player:GetAttribute(Attributes.BikeSkin)
+	for _, skin in Config.Cosmetics.BikeSkins do
+		if skin.id == selected and skin.id ~= "auto" then
+			color = skin.color
+			break
+		end
+	end
 	for _, part in bike:GetDescendants() do
 		if part:IsA("BasePart") and part:GetAttribute("Paint") == true then
 			part.Color = color
