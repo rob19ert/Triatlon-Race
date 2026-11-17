@@ -26,7 +26,6 @@ local Remotes = {
 		FireShot = "FireShot", -- (shotTime: number) — когда нажал «Огонь»; куда была мушка, сервер считает сам
 		HoldBreath = "HoldBreath", -- ()
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
-		DriftIntent = "DriftIntent", -- (holding: boolean) зажал/отпустил дрифт на велосипеде
 		ModifierVote = "ModifierVote", -- (index: number) голос за карточку модификатора в лобби
 		SpectateFocus = "SpectateFocus", -- (targetUserId: number) зритель смотрит за этим гонщиком; 0 — ни за кем
 		DevToFinish = "DevToFinish", -- () только Studio: перенести к финишной линии (тест на нескольких клиентах)

@@ -111,9 +111,6 @@ local function setRiding(player: Player, on: boolean, reason: string)
 		detachBike(player.Character)
 	end
 	log("%s %s (%s)", player.Name, if on then "mounted" else "dismounted", reason)
-	if on then
-		noticeRemote:FireClient(player, Config.Drift.MountHint)
-	end
 end
 
 ---------------------------------------------------------------- круг
