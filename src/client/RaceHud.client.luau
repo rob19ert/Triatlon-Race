@@ -46,7 +46,7 @@ statusLimit.Parent = status
 local feed = Instance.new("TextLabel")
 feed.Name = "Feed"
 feed.AnchorPoint = Vector2.new(0.5, 0)
-feed.Position = UDim2.new(0.5, 0, 0, 62)
+feed.Position = UDim2.new(0.5, 0, 0, 94) -- под плашкой режима заезда (ModifierHud, y=62)
 feed.Size = UDim2.new(0.6, 0, 0, 26)
 feed.BackgroundTransparency = 1
 feed.TextColor3 = Color3.new(1, 1, 1)

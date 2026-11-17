@@ -47,9 +47,6 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-Remotes.get(Remotes.Names.BoxTaken).OnClientEvent:Connect(function(position: Vector3)
-	Fx.burst("Confetti", position)
-end)
 
 ---------------------------------------------------------------- плашки своих бонусов
 
@@ -93,6 +90,9 @@ local function pill(order: number, color: Color3): TextLabel
 end
 
 local D = B.Defs
+local TOAST_SECONDS = 3
+local toast = pill(0, Color3.fromRGB(30, 30, 40)) -- что выпало из бокса: «🛡 Щит — погасит один удар»
+local toastUntil = 0
 local mega = pill(1, Color3.fromRGB(220, 60, 60))
 local ghostPill = pill(2, Color3.fromRGB(120, 110, 170))
 local shieldPill = pill(3, Color3.fromRGB(60, 170, 120))
@@ -102,6 +102,15 @@ local function left(p: Player, name: string): number
 	local v = p:GetAttribute(name)
 	return if typeof(v) == "number" then v - workspace:GetServerTimeNow() else 0
 end
+
+Remotes.get(Remotes.Names.BoxTaken).OnClientEvent:Connect(function(position: Vector3, userId: number, effect: string)
+	Fx.burst("Confetti", position)
+	local def = (D :: any)[effect]
+	if userId == player.UserId and def then
+		toast.Text = string.format("%s %s — %s", def.icon, def.title, def.hint)
+		toastUntil = os.clock() + TOAST_SECONDS
+	end
+end)
 
 ---------------------------------------------------------------- щит и призрак у всех
 
@@ -152,6 +161,7 @@ local shieldSeen: { [Player]: number } = {}
 
 RunService.Heartbeat:Connect(function()
 	-- свои плашки
+	toast.Visible = os.clock() < toastUntil
 	local megaLeft = left(player, Attributes.MegaPushUntil)
 	mega.Visible = megaLeft > 0
 	if megaLeft > 0 then

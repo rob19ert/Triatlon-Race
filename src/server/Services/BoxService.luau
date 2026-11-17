@@ -25,7 +25,6 @@ local ProgressTracker: any
 local ShootingService: any
 local StaminaService: any
 local PenaltyService: any
-local noticeRemote: RemoteEvent
 local takenRemote: RemoteEvent
 
 local spots: { BasePart } = {}
@@ -181,7 +180,6 @@ local function grant(player: Player, effect: string)
 	elseif effect == "TimeBonus" then
 		PenaltyService.add(player, -def.seconds)
 	end
-	noticeRemote:FireClient(player, string.format("%s %s — %s", def.icon, def.title, def.hint))
 end
 
 local function take(player: Player, spot: BasePart, box: BasePart)
@@ -240,7 +238,6 @@ function BoxService.init(services: { [string]: any })
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
 	PenaltyService = services.PenaltyService
-	noticeRemote = Remotes.get(Remotes.Names.Notice)
 	takenRemote = Remotes.get(Remotes.Names.BoxTaken)
 end
 
