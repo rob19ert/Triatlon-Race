@@ -11,7 +11,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
-local Modifier = require(ReplicatedStorage.Shared.Modifier)
 
 local S = Config.Stamina
 
@@ -115,7 +114,7 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	local coasting = st.bike and moving and not st.sprinting and velocity.Y < -Config.Bike.CoastMinDropSpeed
 
 	if st.sprinting then
-		addPulse(st, S.SprintGainPerSec * Modifier.number("pulseGain", 1) * dt)
+		addPulse(st, S.SprintGainPerSec * dt)
 	elseif coasting then
 		addPulse(st, -Config.Bike.CoastRecoveryPerSec * st.recoveryMultiplier * dt)
 	elseif moving then
@@ -133,7 +132,6 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if st.redZone and not st.ignoreRedZonePenalty then
 		speed *= S.RedZoneSpeedMultiplier
 	end
-	speed *= Modifier.number("speed", 1) -- модификатор «Турбо»
 	if os.clock() < st.turboUntil then
 		speed *= Config.Reward.TurboSpeedMultiplier
 	end

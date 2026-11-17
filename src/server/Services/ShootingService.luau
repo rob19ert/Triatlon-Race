@@ -17,7 +17,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local Aim = require(ReplicatedStorage.Shared.Aim)
-local Modifier = require(ReplicatedStorage.Shared.Modifier)
 local Types = require(ReplicatedStorage.Shared.Types)
 
 local C = Config.Shooting
@@ -65,6 +64,7 @@ type Session = {
 	holds: { Aim.Hold },
 	track: Aim.Track,
 	golden: number?, -- индекс золотой мишени на этой стрельбе
+	big: boolean, -- бонус «Большие мишени»
 	finishing: boolean,
 }
 
@@ -167,30 +167,31 @@ local function loadRange(model: Model): Range?
 	}
 end
 
--- Размер мишени: исходный × модификатор (ось цилиндра — X, диаметр — Y и Z) × extra (золотая меньше).
-local function sizedTarget(lane: Lane, index: number, stance: Aim.Stance, extra: number): Vector3
+-- Размер мишени: исходный, с бонусом «Большие мишени» крупнее (ось цилиндра — X, диаметр — Y и Z),
+-- extra — золотая меньше.
+local function sizedTarget(lane: Lane, index: number, stance: Aim.Stance, big: boolean, extra: number): Vector3
 	local base = lane.targetSizes[index]
-	local k = Aim.targetDiameter(stance) / C.TargetDiameter[stance] * extra
+	local k = Aim.targetDiameter(stance, big) / C.TargetDiameter[stance] * extra
 	return Vector3.new(base.X, base.Y * k, base.Z * k)
 end
 
-local function resetLaneTargets(lane: Lane, stance: Aim.Stance)
+local function resetLaneTargets(lane: Lane, stance: Aim.Stance, big: boolean)
 	for i, target in lane.targets do
 		target.Color = C.TargetOpenColor
-		target.Size = sizedTarget(lane, i, stance, 1)
+		target.Size = sizedTarget(lane, i, stance, big, 1)
 	end
 end
 
 -- Золотая мишень: меньше и золотая (её видят все — меняем саму деталь).
-local function makeGolden(lane: Lane, index: number, stance: Aim.Stance)
+local function makeGolden(lane: Lane, index: number, stance: Aim.Stance, big: boolean)
 	local target = lane.targets[index]
-	target.Size = sizedTarget(lane, index, stance, R.GoldenSizeMultiplier)
+	target.Size = sizedTarget(lane, index, stance, big, R.GoldenSizeMultiplier)
 	target.Color = R.GoldenColor
 end
 
 local function resetRange(range: Range)
 	for _, lane in range.lanes do
-		resetLaneTargets(lane, range.stance)
+		resetLaneTargets(lane, range.stance, false)
 	end
 end
 
@@ -235,7 +236,10 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	local character = player.Character :: Model
 
 	laneOccupant[lane] = player
-	resetLaneTargets(lane, range.stance) -- после предыдущего стрелка мишени могли остаться закрытыми
+	-- бонус из бокса «Большие мишени» — на эту стрельбу, тратится сразу
+	local big = player:GetAttribute(Attributes.BigTargets) == true
+	player:SetAttribute(Attributes.BigTargets, nil)
+	resetLaneTargets(lane, range.stance, big) -- после предыдущего стрелка мишени могли остаться закрытыми
 
 	local eye = lane.eye.CFrame
 	local spacingDeg = 0
@@ -249,7 +253,7 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	local track: Aim.Track = {
 		t0 = now(),
 		phase0 = trackRng:NextNumber(0, 2 * math.pi),
-		speed = Aim.pendulumSpeed(pulse, range.stance),
+		speed = Aim.pendulumSpeed(pulse, range.stance, big),
 		hAmp = C.PendulumWidth * spacingDeg,
 		tremorSeed = trackRng:NextNumber(0, 2 * math.pi),
 	}
@@ -265,10 +269,11 @@ local function startSession(player: Player, range: Range, root: BasePart)
 		holds = {},
 		track = track,
 		golden = if trackRng:NextNumber() < R.GoldenChance then trackRng:NextInteger(1, #lane.targets) else nil,
+		big = big,
 		finishing = false,
 	}
 	if session.golden then
-		makeGolden(lane, session.golden, range.stance)
+		makeGolden(lane, session.golden, range.stance, big)
 	end
 	sessions[player] = session
 	-- соперники видят, кто стреляет и сколько закрыл
@@ -290,6 +295,7 @@ local function startSession(player: Player, range: Range, root: BasePart)
 		lane = lane.index,
 		targetSpacingDeg = spacingDeg,
 		track = track,
+		bigTargets = big,
 	}
 	remoteStarted:FireClient(player, payload)
 	log(
@@ -373,7 +379,7 @@ local function onFireShot(player: Player, shotTime: unknown)
 	local swayYaw, swayPitch = Aim.crosshair(session.track, swayTime, session.holds, pulse, range.stance)
 	local shot = Aim.cframe(session.lane.eye.CFrame, swayYaw, swayPitch)
 
-	local radius = Aim.targetDiameter(range.stance) / 2
+	local radius = Aim.targetDiameter(range.stance, session.big) / 2
 	local hitIndex = Aim.findHit(shot.Position, shot.LookVector, session.lane.targets, function(i)
 		return if i == session.golden then radius * R.GoldenSizeMultiplier else radius
 	end)
@@ -540,12 +546,6 @@ function ShootingService.start()
 		return a.order < b.order
 	end)
 	log("%d range(s) loaded", #ranges)
-	-- модификатор («Большие мишени») сменился — перерисовать мишени
-	workspace:GetAttributeChangedSignal(Modifier.ActiveAttr):Connect(function()
-		for _, range in ranges do
-			resetRange(range)
-		end
-	end)
 
 	Remotes.get(Remotes.Names.FireShot).OnServerEvent:Connect(onFireShot)
 	Remotes.get(Remotes.Names.HoldBreath).OnServerEvent:Connect(onHoldBreath)

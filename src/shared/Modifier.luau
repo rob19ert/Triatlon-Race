@@ -48,11 +48,4 @@ function Modifier.def(id: string?): any
 	return if id then (Config.Modifiers.Defs :: any)[id] else nil
 end
 
--- Числовой параметр активного модификатора (нет модификатора или поля — default).
-function Modifier.number(field: string, default: number): number
-	local def = Modifier.def(Modifier.active())
-	local v = def and def[field]
-	return if typeof(v) == "number" then v else default
-end
-
 return Modifier

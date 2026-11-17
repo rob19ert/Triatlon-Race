@@ -40,6 +40,7 @@ export type ShootingStartPayload = {
 	shots: number,
 	lane: number,
 	targetSpacingDeg: number, -- угол между соседними мишенями из глаз стрелка
+	bigTargets: boolean, -- бонус «Большие мишени» (крупнее, маятник быстрее)
 	track: { -- маятник мушки на эту стрельбу (Shared/Aim.Track)
 		t0: number,
 		phase0: number,
