@@ -6,6 +6,7 @@ local Attributes = require(Shared:WaitForChild("Attributes"))
 local Config = require(Shared:WaitForChild("Config")).Cosmetics
 local Remotes = require(Shared:WaitForChild("Remotes"))
 
+local ShopPreview = require(script.Parent:WaitForChild("ShopPreview"))
 local player = Players.LocalPlayer
 local selectSkin = Remotes.get(Remotes.Names.SelectBikeSkin)
 local gui = Instance.new("ScreenGui")
@@ -43,19 +44,19 @@ overlay.Parent = gui
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromScale(0.92, 0.86)
+panel.Size = UDim2.fromScale(0.95, 0.94)
 panel.BackgroundColor3 = Color3.fromRGB(20, 25, 36)
 panel.Parent = overlay
 Instance.new("UICorner", panel)
 local limit = Instance.new("UISizeConstraint", panel)
-limit.MaxSize = Vector2.new(820, 510)
+limit.MaxSize = Vector2.new(952, 648)
 
 local title = Instance.new("TextLabel")
-title.Position = UDim2.fromOffset(18, 0)
+title.Position = UDim2.fromOffset(20, 0)
 title.Size = UDim2.new(1, -70, 0, 52)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
-title.TextSize = 19
+title.TextSize = 22
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Text = "Магазин велосипедов"
@@ -67,8 +68,8 @@ close.Position = UDim2.new(1, -10, 0, 8)
 close.Size = UDim2.fromOffset(36, 36)
 
 local list = Instance.new("ScrollingFrame")
-list.Position = UDim2.fromOffset(10, 54)
-list.Size = UDim2.new(1, -20, 1, -66)
+list.Position = UDim2.fromOffset(16, 60)
+list.Size = UDim2.new(1, -32, 1, -76)
 list.BackgroundTransparency = 1
 list.BorderSizePixel = 0
 list.ScrollBarThickness = 4
@@ -76,44 +77,23 @@ list.CanvasSize = UDim2.fromOffset(0, 0)
 list.AutomaticCanvasSize = Enum.AutomaticSize.Y
 list.Parent = panel
 local layout = Instance.new("UIGridLayout", list)
-layout.CellPadding = UDim2.fromOffset(8, 8)
+layout.CellPadding = UDim2.fromOffset(12, 12)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 local function resize()
 	local width = list.AbsoluteSize.X
-	local columns = if width >= 600 then 3 elseif width >= 300 then 2 else 1
-	layout.CellSize = UDim2.fromOffset(math.max(1, math.floor((width - 8 * columns) / columns)), 174)
+	local columns = if width >= 660 then 3 elseif width >= 346 then 2 else 1
+	local cardWidth = math.max(1, math.floor((width - 8 - (columns - 1)*12) / columns))
+	local height = math.clamp(math.floor(cardWidth * .66), 115, 185) + 93
+	if columns == 3 then
+		height = math.min(height, math.max(202, math.floor((list.AbsoluteSize.Y - 12) / 2)))
+	end
+	layout.CellSize = UDim2.fromOffset(cardWidth, height)
 end
 list:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
 resize()
 
 local showroom = game:GetService("ReplicatedStorage"):WaitForChild("BikeShowroom")
 local rows: { [string]: TextButton } = {}
-local function preview(row: TextButton, source: Model, accent: Color3)
-	local view = Instance.new("ViewportFrame")
-	view.Size = UDim2.new(1, -8, 1, -52)
-	view.Position = UDim2.fromOffset(4, 4)
-	view.BackgroundColor3 = Color3.fromRGB(41, 49, 66):Lerp(accent, 0.18)
-	view.Ambient = Color3.fromRGB(183, 192, 213)
-	view.LightColor = Color3.fromRGB(255, 241, 217)
-	view.LightDirection = Vector3.new(-1, -2, 1)
-	view.Parent = row
-	Instance.new("UICorner", view)
-	local bike = source:Clone()
-	bike:PivotTo(CFrame.identity)
-	bike.Parent = view
-	local bounds, size = bike:GetBoundingBox()
-	local camera = Instance.new("Camera")
-	camera.FieldOfView = 32
-	local function frame()
-		local aspect = view.AbsoluteSize.X / math.max(1, view.AbsoluteSize.Y)
-		local distance = math.max(size.Y + size.X * 0.38, size.Z / math.max(0.5, aspect)) * 2.2
-		camera.CFrame = CFrame.lookAt(bounds.Position + Vector3.new(1, 0.32, -0.48).Unit * distance, bounds.Position)
-	end
-	camera.Parent = view
-	view.CurrentCamera = camera
-	view:GetPropertyChangedSignal("AbsoluteSize"):Connect(frame)
-	frame()
-end
 local function unlocked(id: string, requiredLevel: number): boolean
 	local level = player:GetAttribute(Attributes.ProfileLevel)
 	local owned = player:GetAttribute(Attributes.OwnedBikeSkins)
@@ -122,13 +102,28 @@ local function unlocked(id: string, requiredLevel: number): boolean
 end
 
 for index, skin in Config.BikeSkins do
-	local row = button(list, skin.id, "")
-	row.LayoutOrder = index
-	row.TextYAlignment = Enum.TextYAlignment.Bottom
-	row.TextSize = 14
-	row.TextWrapped = true
-	local source = showroom:WaitForChild(skin.id) :: Model
-	preview(row, source, skin.color)
+	local card = Instance.new("Frame")
+	card.Name = skin.id
+	card.LayoutOrder = index
+	card.BackgroundColor3 = Color3.fromRGB(40, 49, 65)
+	card.Parent = list
+	Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
+	ShopPreview.mount(card, showroom:WaitForChild(skin.id) :: Model)
+
+	local name = title:Clone()
+	name.Name = "ModelName"
+	name.Text = skin.title
+	name.TextSize = 16
+	name.Position = UDim2.new(0, 12, 1, -82)
+	name.Size = UDim2.new(1, -24, 0, 28)
+	name.TextScaled = true
+	local textLimit = Instance.new("UITextSizeConstraint", name)
+	textLimit.MaxTextSize = 17
+	name.Parent = card
+
+	local row = button(card, "Select", "")
+	row.Position = UDim2.new(0, 10, 1, -49)
+	row.Size = UDim2.new(1, -20, 0, 40)
 	rows[skin.id] = row
 	row.Activated:Connect(function()
 		if player:GetAttribute(Attributes.ProfileLevel) == nil then
@@ -152,8 +147,12 @@ local function refresh()
 			elseif unlocked(skin.id, skin.level) then "Выбрать"
 			elseif skin.productId > 0 then "Купить"
 			else string.format("Уровень %d", skin.level)
-		row.Text = skin.title .. "\n" .. suffix
-		row.BackgroundColor3 = if selected == skin.id then Color3.fromRGB(37, 89, 83) else Color3.fromRGB(32, 39, 54)
+		row.Text = suffix
+		local available = loaded and (unlocked(skin.id, skin.level) or skin.productId > 0)
+		row.Active = available and selected ~= skin.id
+		row.AutoButtonColor = row.Active
+		row.TextColor3 = if available then Color3.fromRGB(20, 38, 47) else Color3.fromRGB(194, 205, 220)
+		row.BackgroundColor3 = if selected == skin.id then Color3.fromRGB(132, 225, 199) elseif available then Color3.fromRGB(248, 224, 165) else Color3.fromRGB(54, 65, 83)
 	end
 end
 

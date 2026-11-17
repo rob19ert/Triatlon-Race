@@ -29,6 +29,29 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 	local function bar(name: string, a: Vector3,b: Vector3,width: number,col: Color3,mat: Enum.Material)
 		piece(name,Enum.PartType.Cylinder,vec((a-b).Magnitude,width,width),CFrame.lookAt((a+b)/2,b)*CFrame.Angles(0,math.pi/2,0),col,mat)
 	end
+	-- Keep the axle motors as the animation roots, and lace the open wheels to them.
+	if id ~= "ember" and id ~= "violet" then
+		for _, name in {"FrontWheel", "RearWheel"} do
+			local axle = model:FindFirstChild(name, true) :: BasePart
+			local center = root.CFrame:PointToObjectSpace(axle.Position)
+			local rimColor = if id == "gold" then copper elseif id == "auto" then rgb(108,199,221) else accent
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") and (part == axle or part.Name == name.."Rim" or part.Name == name.."Spoke") then
+					part.Transparency = 1
+				end
+			end
+			local segments = 20
+			for i = 1, segments do
+				local angle = i * math.pi * 2 / segments
+				local radial = CFrame.new(center) * CFrame.Angles(angle, 0, 0)
+				piece("Tread", Enum.PartType.Block, vec(.31,.21,.41), radial*CFrame.new(0,1.19,0), ink, smooth, axle)
+				piece("Rim", Enum.PartType.Block, vec(.21,.12,.36), radial*CFrame.new(0,1.05,0), rimColor, metal, axle)
+				if i % 2 == 0 then
+					piece("Spoke", Enum.PartType.Block, vec(.05,.95,.06), radial*CFrame.new(0,.56,0), cream, metal, axle)
+				end
+			end
+		end
+	end
 	local function wheels(disc: Color3, trim: Color3)
 		for _, name in {"FrontWheel","RearWheel"} do
 			local wheel = model:FindFirstChild(name,true) :: BasePart
@@ -46,6 +69,10 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 			local angle = i*math.pi/4
 			bar("BasketWire",vec(.37*math.cos(angle),2.65,-2.25+.3*math.sin(angle)),vec(.55*math.cos(angle),3.25,-2.25+.47*math.sin(angle)),.07,cream,metal)
 		end
+		for i=0,7 do
+			local a,b = i*math.pi/4,(i+1)*math.pi/4
+			bar("BasketLip",vec(.55*math.cos(a),3.25,-2.25+.47*math.sin(a)),vec(.55*math.cos(b),3.25,-2.25+.47*math.sin(b)),.075,cream,metal)
+		end
 		oval("Basket",0,2.76,-2.25,.91,.33,.79,accent,smooth)
 		for i=1,5 do
 			local angle=i*math.pi*2/5
@@ -58,6 +85,7 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 		for _, side in {-1,1} do
 			piece("Wing",Enum.PartType.Block,vec(1.32,.13,.79),CFrame.new(side*.83,1.89,.45)*CFrame.Angles(0,side*-.52,0),cream,metal)
 			oval("Nacelle",side*.76,1.87,1.14,.47,.5,1.45,ink,metal)
+			bar("EngineBand",vec(side*.76,1.87,1.55),vec(side*.76,1.87,1.68),.48,cream,metal)
 			oval("IonJet",side*.76,1.87,1.92,.35,.36,.65,accent,glow)
 		end
 	elseif id == "ember" then -- horned fire drake
@@ -68,6 +96,9 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 		oval("Snout",0,3.02,-2.48,.59,.37,.78,rgb(138,47,41),smooth)
 		for _, side in {-1,1} do
 			bar("Horn",vec(side*.25,3.36,-1.73),vec(side*.4,3.91,-1.35),.16,cream,metal)
+			for i=0,3 do
+				oval("NeckScale",side*.23,2.04+i*.24,-1.15-i*.17,.17,.32,.37,rgb(187,77+i*9,42),metal)
+			end
 			oval("Eye",side*.33,3.24,-2.13,.12,.17,.23,rgb(255,205,55),glow)
 		end
 		bar("Tail",vec(0,1.92,.8),vec(0,2.63,2.65),.35,accent,smooth)
@@ -80,6 +111,7 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 			bar("Branch",vec(side*.25,2.5,-1.45),vec(side*.96,3.31,-1.95),.16,copper,Enum.Material.Wood)
 			for i=1,3 do
 				oval("Leaf",side*(.29+i*.23),2.97+i*.14,-1.8+i*.15,.47,.19,.72,if i%2==0 then accent else rgb(58,156,102),smooth)
+				oval("Petal",side*.44,2.53+i*.08,1.04+i*.27,.23,.14,.25,cream,smooth)
 				oval("Blossom",side*.33,2.43+i*.08,1.0+i*.27,.36,.36,.35,rgb(255,150+i*15,173),smooth)
 			end
 		end
@@ -88,12 +120,16 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 		wheels(ink,accent)
 		oval("Armor",0,1.89,-.66,1.14,1.04,2.79,ink,metal)
 		for _, side in {-1,1} do
+			oval("CheekArmor",side*.44,1.92,-.73,.25,.65,1.91,rgb(58,44,85),metal)
 			bar("LightRail",vec(side*.48,1.64,.28),vec(side*.48,2.2,-1.6),.13,accent,glow)
 			piece("SplitFin",Enum.PartType.Block,vec(.18,.47,1.63),CFrame.new(side*.48,2.38,1.52)*CFrame.Angles(-.24,side*.23,0),accent,metal)
 		end
 		piece("Visor",Enum.PartType.Block,vec(.92,.24,.52),CFrame.new(0,2.76,-1.76)*CFrame.Angles(.42,0,0),rgb(84,242,255),glow)
 	elseif id == "gold" then -- brass steam engine and external gear train
 		oval("Boiler",0,1.86,-.71,1.02,1.08,2.22,copper,metal)
+		for _, z in {-.98,-.39} do
+			bar("BoilerBand",vec(0,1.86,z-.05),vec(0,1.86,z+.05),1.09,accent,metal)
+		end
 		bar("Chimney",vec(0,2.15,-1.44),vec(0,3.33,-1.44),.41,ink,metal)
 		bar("BrassLip",vec(0,3.24,-1.44),vec(0,3.42,-1.44),.59,accent,metal)
 		for _, side in {-1,1} do
