@@ -31,6 +31,7 @@ local boxes: { [BasePart]: BasePart } = {} -- точка -> бокс на ней
 local reserved: { [BasePart]: boolean } = {} -- точка ждёт респауна (бокс только что взят)
 local folder: Folder
 local rng = Random.new()
+local lastEffect: { [Player]: string } = {} -- последний выпавший бонус (не повторяем подряд)
 
 local function log(fmt: string, ...: any)
 	print("[BoxService] " .. string.format(fmt, ...))
@@ -93,6 +94,44 @@ end
 
 ---------------------------------------------------------------- бонусы
 
+-- Бонус бесполезен прямо сейчас: «Большие мишени» уже есть или стрельб больше не будет.
+local function isUseless(player: Player, effect: string): boolean
+	if effect == "BigTargets" then
+		return player:GetAttribute(Attributes.BigTargets) == true
+			or ShootingService.getCompletedStages(player) >= ShootingService.getRangeCount()
+	end
+	return false
+end
+
+-- Бонус по времени ещё действует (повтор только продлит его).
+local function isActive(player: Player, effect: string): boolean
+	local name = if effect == "Turbo" then Attributes.TurboUntil elseif effect == "MegaPush" then Attributes.MegaPushUntil else nil
+	local v = name and player:GetAttribute(name)
+	return typeof(v) == "number" and v > workspace:GetServerTimeNow()
+end
+
+-- Случайный бонус. По порядку ослабляем правила, пока есть из чего выбрать:
+-- не бесполезный, не действующий, не прошлый → … → хоть какой-нибудь.
+local function pickEffect(player: Player): string
+	local last = lastEffect[player]
+	local function filter(skipActive: boolean, skipLast: boolean): { string }
+		local list = {}
+		for _, effect in B.Effects do
+			if not isUseless(player, effect) and not (skipActive and isActive(player, effect)) and not (skipLast and effect == last) then
+				table.insert(list, effect)
+			end
+		end
+		return list
+	end
+	local pools = { filter(true, true), filter(true, false), filter(false, true), filter(false, false), B.Effects }
+	for _, list in pools do
+		if #list > 0 then
+			return list[rng:NextInteger(1, #list)]
+		end
+	end
+	return B.Effects[1]
+end
+
 local function grant(player: Player, effect: string)
 	local def = (B.Defs :: any)[effect]
 	if effect == "Turbo" then
@@ -110,7 +149,8 @@ local function take(player: Player, spot: BasePart, box: BasePart)
 	reserved[spot] = true
 	local position = box.Position
 	box:Destroy()
-	local effect = B.Effects[rng:NextInteger(1, #B.Effects)]
+	local effect = pickEffect(player)
+	lastEffect[player] = effect
 	grant(player, effect)
 	takenRemote:FireAllClients(position, player.UserId, effect)
 	log("%s took %s", player.Name, effect)
@@ -149,6 +189,7 @@ local function clearPlayerBonuses()
 		player:SetAttribute(Attributes.MegaPushUntil, nil)
 		player:SetAttribute(Attributes.BigTargets, nil)
 	end
+	table.clear(lastEffect)
 end
 
 function BoxService.init(services: { [string]: any })
@@ -173,6 +214,9 @@ function BoxService.start()
 		spawnOne()
 	end
 	log("%d spot(s), %d box(es)", #spots, math.min(B.Active, #spots))
+	Players.PlayerRemoving:Connect(function(player)
+		lastEffect[player] = nil
+	end)
 
 	local lastState = RaceManager.getState()
 	RunService.Heartbeat:Connect(function()
