@@ -1,5 +1,5 @@
 --!strict
--- Только Studio: G — перенестись к финишной линии (см. DevService).
+-- Только Studio: G — перенестись к финишной линии, B — в велопарк с засчитанной первой стрельбой (см. DevService).
 
 local RunService = game:GetService("RunService")
 if not RunService:IsStudio() then
@@ -21,3 +21,11 @@ ContextActionService:BindAction("DevToFinish", function(_, state)
 	end
 	return Enum.ContextActionResult.Pass
 end, false, Config.Dev.ToFinishKey)
+
+local toBike = Remotes.get(Remotes.Names.DevToBike)
+ContextActionService:BindAction("DevToBike", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		toBike:FireServer()
+	end
+	return Enum.ContextActionResult.Pass
+end, false, Config.Dev.ToBikeKey)

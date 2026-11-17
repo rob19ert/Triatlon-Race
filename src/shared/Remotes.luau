@@ -28,6 +28,7 @@ local Remotes = {
 		PushIntent = "PushIntent", -- () толкнуть соперника впереди
 		ModifierVote = "ModifierVote", -- (index: number) голос за карточку модификатора в лобби
 		SpectateFocus = "SpectateFocus", -- (targetUserId: number) зритель смотрит за этим гонщиком; 0 — ни за кем
+		DevToBike = "DevToBike", -- () только Studio: засчитать первую стрельбу и перенести в велопарк (зона посадки)
 		DevToFinish = "DevToFinish", -- () только Studio: перенести к финишной линии (тест на нескольких клиентах)
 	},
 }

@@ -512,6 +512,12 @@ function ShootingService.getCompletedStages(player: Player): number
 end
 
 -- Сколько стрельбищ на трассе.
+-- Только для DevService (Studio): засчитать стрельбище без стрельбы (5/5).
+function ShootingService.devComplete(player: Player, rangeOrder: number)
+	results[player] = results[player] or {}
+	results[player][rangeOrder] = { hits = C.ShotsPerStage, misses = 0 }
+end
+
 function ShootingService.getRangeCount(): number
 	return #ranges
 end
