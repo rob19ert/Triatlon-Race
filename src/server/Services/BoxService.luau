@@ -3,7 +3,8 @@
 --  * на Active случайных точках (теги BoxSpot) стоят боксы;
 --  * участник на трассе (не на рубеже) проехал сквозь бокс — получает случайный бонус только себе,
 --    бокс пропадает у всех и через RespawnTime появляется в другой свободной точке;
---  * бонусы: ⚡ Турбо (то же, что за 5/5), 💥 Мега-толчок на N секунд, 🎯 Большие мишени на следующую стрельбу.
+--  * бонусы: ⚡ Турбо (то же, что за 5/5), 💥 Мега-толчок на N секунд, 🎯 Большие мишени на следующую стрельбу,
+--    🛡 Щит (одно попадание), 👻 Призрак (сквозь препятствия), 💚 Второе дыхание (пульс вниз), ⏱ −2 с.
 -- Боксы стоят всё время (и в лобби — видно, где они), брать можно только в гонке.
 
 local CollectionService = game:GetService("CollectionService")
@@ -23,6 +24,7 @@ local RaceManager: any
 local ProgressTracker: any
 local ShootingService: any
 local StaminaService: any
+local PenaltyService: any
 local noticeRemote: RemoteEvent
 local takenRemote: RemoteEvent
 
@@ -99,13 +101,20 @@ local function isUseless(player: Player, effect: string): boolean
 	if effect == "BigTargets" then
 		return player:GetAttribute(Attributes.BigTargets) == true
 			or ShootingService.getCompletedStages(player) >= ShootingService.getRangeCount()
+	elseif effect == "SecondWind" then
+		return (StaminaService.getPulse(player) or 0) < B.Defs.SecondWind.uselessBelow
 	end
 	return false
 end
 
 -- Бонус по времени ещё действует (повтор только продлит его).
 local function isActive(player: Player, effect: string): boolean
-	local name = if effect == "Turbo" then Attributes.TurboUntil elseif effect == "MegaPush" then Attributes.MegaPushUntil else nil
+	local name = if effect == "Turbo"
+		then Attributes.TurboUntil
+		elseif effect == "MegaPush" then Attributes.MegaPushUntil
+		elseif effect == "Shield" then Attributes.ShieldUntil
+		elseif effect == "Ghost" then Attributes.GhostUntil
+		else nil
 	local v = name and player:GetAttribute(name)
 	return typeof(v) == "number" and v > workspace:GetServerTimeNow()
 end
@@ -140,6 +149,17 @@ local function grant(player: Player, effect: string)
 		player:SetAttribute(Attributes.MegaPushUntil, workspace:GetServerTimeNow() + def.seconds)
 	elseif effect == "BigTargets" then
 		player:SetAttribute(Attributes.BigTargets, true)
+	elseif effect == "Shield" then
+		player:SetAttribute(Attributes.ShieldUntil, workspace:GetServerTimeNow() + def.seconds)
+	elseif effect == "Ghost" then
+		player:SetAttribute(Attributes.GhostUntil, workspace:GetServerTimeNow() + def.seconds)
+	elseif effect == "SecondWind" then
+		local pulse = StaminaService.getPulse(player)
+		if pulse and pulse > def.pulse then
+			StaminaService.addPulse(player, def.pulse - pulse)
+		end
+	elseif effect == "TimeBonus" then
+		PenaltyService.add(player, -def.seconds)
 	end
 	noticeRemote:FireClient(player, string.format("%s %s!", def.icon, def.title))
 end
@@ -188,6 +208,8 @@ local function clearPlayerBonuses()
 	for _, player in Players:GetPlayers() do
 		player:SetAttribute(Attributes.MegaPushUntil, nil)
 		player:SetAttribute(Attributes.BigTargets, nil)
+		player:SetAttribute(Attributes.ShieldUntil, nil)
+		player:SetAttribute(Attributes.GhostUntil, nil)
 	end
 	table.clear(lastEffect)
 end
@@ -197,6 +219,7 @@ function BoxService.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
+	PenaltyService = services.PenaltyService
 	noticeRemote = Remotes.get(Remotes.Names.Notice)
 	takenRemote = Remotes.get(Remotes.Names.BoxTaken)
 end

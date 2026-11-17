@@ -59,6 +59,17 @@ function PenaltyService.endRace()
 	table.clear(seconds)
 end
 
+-- Добавить (или со знаком минус — снять) секунды к времени игрока: бонусы из боксов.
+function PenaltyService.add(player: Player, delta: number)
+	local current = seconds[player]
+	if not current then
+		return
+	end
+	seconds[player] = current + delta
+	publish(player)
+	print(string.format("[PenaltyService] %s %+ds (total %ds)", player.Name, delta, seconds[player]))
+end
+
 -- Накопленное штрафное время игрока, с.
 function PenaltyService.getSeconds(player: Player): number
 	return seconds[player] or 0

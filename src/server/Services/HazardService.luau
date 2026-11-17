@@ -13,6 +13,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local HazardMotion = require(ReplicatedStorage.Shared.HazardMotion)
 local Knockback = require(script.Parent.Parent.Lib.Knockback)
+local Protection = require(script.Parent.Parent.Lib.Protection)
 
 local H = Config.Hazards
 local VELOCITY_DT = 1 / 30 -- шаг для оценки скорости детали (направление удара)
@@ -111,6 +112,9 @@ local function step()
 		local direction = findHit(root.Position, t)
 		if direction then
 			immuneUntil[player] = now + H.HitImmunity
+			if Protection.absorb(player) then
+				continue -- призрак / щит
+			end
 			Knockback.apply(root, direction, H.KnockSpeed, H.KnockUpSpeed, H.KnockImpulseTime)
 			knockedRemote:FireClient(player, H.KnockdownTime)
 			log("%s knocked down", player.Name)

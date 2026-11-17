@@ -213,7 +213,7 @@ local Config = {
 		PickupRadius = 4.5, -- стад от центра бокса до корня персонажа
 		Size = 3,
 		Color = Color3.fromRGB(255, 190, 40),
-		Effects = { "Turbo", "MegaPush", "BigTargets" }, -- что может выпасть (поровну)
+		Effects = { "Turbo", "MegaPush", "BigTargets", "Shield", "Ghost", "SecondWind", "TimeBonus" }, -- что может выпасть (поровну)
 		Defs = {
 			Turbo = { icon = "⚡", title = "Турбо", seconds = 5 }, -- то же турбо, что за 5/5 (Config.Reward)
 			MegaPush = {
@@ -231,6 +231,10 @@ local Config = {
 				maxDiameter = 1.33, -- но не больше (мишени стоят через 1,4 стад — не слипаться)
 				pendulumSpeed = 1.3, -- маятник мушки быстрее
 			},
+			Shield = { icon = "🛡", title = "Щит", seconds = 30 }, -- гасит одно попадание (маятник, поезд, толчок…); пропадает через seconds
+			Ghost = { icon = "👻", title = "Призрак", seconds = 4, transparency = 0.65 }, -- сквозь препятствия и толчки
+			SecondWind = { icon = "💚", title = "Второе дыхание", pulse = 30, uselessBelow = 45 }, -- пульс сразу до pulse; ниже uselessBelow — не выдаём
+			TimeBonus = { icon = "⏱", title = "−2 секунды", seconds = 2 }, -- к итоговому времени
 		},
 	},
 

@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local Knockback = require(script.Parent.Parent.Lib.Knockback)
+local Protection = require(script.Parent.Parent.Lib.Protection)
 
 local C = Config.Push
 local MEGA = Config.Boxes.Defs.MegaPush
@@ -77,7 +78,7 @@ local function findTarget(pusher: Player, root: BasePart): (Player?, BasePart?)
 
 	local best: Player?, bestRoot: BasePart?, bestDist = nil, nil, math.huge
 	for other in racers do
-		if other == pusher or not canPushOrBePushed(other) or now() < (immuneUntil[other] or 0) then
+		if other == pusher or not canPushOrBePushed(other) or now() < (immuneUntil[other] or 0) or Protection.isGhost(other) then
 			continue
 		end
 		local otherRoot = getRoot(other)
@@ -118,6 +119,15 @@ local function onPushIntent(player: Player)
 	if not target or not targetRoot then
 		setReadyAt(player, t + C.MissCooldown)
 		pushFxRemote:FireAllClients(player.UserId, 0) -- руки вперёд и мимо
+		return
+	end
+
+	if Protection.absorb(target) then
+		-- щит погасил толчок: руки вперёд есть, отлёта нет
+		immuneUntil[target] = t + C.TargetImmunity
+		setReadyAt(player, t + C.Cooldown)
+		pushFxRemote:FireAllClients(player.UserId, 0)
+		noticeRemote:FireClient(player, string.format("%s закрылся щитом!", target.DisplayName))
 		return
 	end
 
