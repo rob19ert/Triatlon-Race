@@ -29,6 +29,7 @@ type PlayerProgress = {
 	checkpointOrder: number,
 	lastLineDist: number?, -- расстояние до плоскости финиша в прошлом кадре (>0 — ещё не пересёк)
 	lastClock: number,
+	studioFinish: boolean?,
 }
 
 local tracked: { [Player]: PlayerProgress } = {}
@@ -113,7 +114,8 @@ local function step()
 		local prevDist, prevClock = progress.lastLineDist, progress.lastClock
 		progress.lastLineDist, progress.lastClock = dist, clock
 
-		if dist <= 0 and Zone.inColumn(finishZone, position) then
+		if dist <= 0 and Zone.inColumn(finishZone, position)
+			and (progress.studioFinish or ShootingService.getCompletedStages(player) == ShootingService.getRangeCount()) then
 			-- доля кадра, на которой пересекли линию
 			local finishClock = clock
 			if prevDist and prevDist > 0 then
@@ -149,6 +151,12 @@ function ProgressTracker.beginTracking(players: { Player })
 	table.clear(tracked)
 	for _, player in players do
 		tracked[player] = { checkpoint = nil, checkpointOrder = 0, lastLineDist = nil, lastClock = 0 }
+	end
+end
+
+function ProgressTracker.allowStudioFinish(player: Player)
+	if RunService:IsStudio() and tracked[player] then
+		tracked[player].studioFinish = true
 	end
 end
 

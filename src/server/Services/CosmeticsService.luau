@@ -43,7 +43,7 @@ function CosmeticsService.start()
 				local success = DataService.selectBikeSkin(player, id, skin.level)
 				selecting[player] = nil
 				if not success and player.Parent == Players then
-					Remotes.get(Remotes.Names.Notice):FireClient(player, "Не удалось сохранить расцветку")
+					Remotes.get(Remotes.Names.Notice):FireClient(player, "Не удалось сохранить выбор велосипеда")
 				end
 				return
 			end

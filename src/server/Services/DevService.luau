@@ -33,6 +33,7 @@ local function onToFinish(player: Player)
 		return
 	end
 	local track = workspace:WaitForChild(Config.Track.FolderName)
+	ProgressTracker.allowStudioFinish(player)
 	local line = track:WaitForChild(Config.Track.FinishLineName) :: BasePart
 	-- трасса идёт вдоль -Z: встаём перед линией, лицом к ней
 	local x = ((slot % 5) - 2) * D.ToFinishSpacing

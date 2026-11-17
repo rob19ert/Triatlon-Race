@@ -62,6 +62,9 @@ end
 
 local template = ServerStorage:FindFirstChild(C.TemplateName) :: Model?
 
+local showroom = Instance.new("Folder")
+showroom.Name = "BikeShowroom"
+
 local function detachBike(character: Model?)
 	local bike = character and character:FindFirstChild(C.ModelName)
 	if bike then
@@ -79,21 +82,13 @@ local function attachBike(player: Player, character: Model)
 	if not root or not humanoid then
 		return
 	end
-	local bike = template:Clone()
-	bike.Name = C.ModelName
-	local color = C.Colors[player.UserId % #C.Colors + 1]
 	local selected = player:GetAttribute(Attributes.BikeSkin)
-	for _, skin in Config.Cosmetics.BikeSkins do
-		if skin.id == selected and skin.id ~= "auto" then
-			color = skin.color
-			break
-		end
+	local source = showroom:FindFirstChild(selected or "auto") or showroom:FindFirstChild("auto")
+	if not source or not source:IsA("Model") then
+		return
 	end
-	for _, part in bike:GetDescendants() do
-		if part:IsA("BasePart") and part:GetAttribute("Paint") == true then
-			part.Color = color
-		end
-	end
+	local bike = source:Clone()
+	bike.Name = C.ModelName
 	local bikeRoot = bike.PrimaryPart :: BasePart
 	local offset = CFrame.new(0, -(humanoid.HipHeight + root.Size.Y / 2), 0)
 	bike:PivotTo(root.CFrame * offset)
@@ -220,7 +215,15 @@ function BikeService.init(services: { [string]: any })
 end
 
 function BikeService.start()
-	if not template then
+	if template then
+		local builder = require(script.Parent.Parent.Lib.BikeModels)
+		for _, skin in Config.Cosmetics.BikeSkins do
+			local bike = builder.build(template, skin.id, skin.color)
+			bike.Name = skin.id
+			bike.Parent = showroom
+		end
+		showroom.Parent = ReplicatedStorage
+	else
 		warn("[BikeService] ServerStorage." .. C.TemplateName .. " not found — riding without a bike model")
 	end
 	loadGates()

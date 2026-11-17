@@ -157,10 +157,8 @@ local function onPlayerFinished(player: Player, finishClock: number)
 		dnf = false,
 	}
 	local photo = insertFinisher(entry)
-	if ShootingService.getCompletedStages(player) == ShootingService.getRangeCount() then
-		local hits, shots = ShootingService.getTotals(player)
-		DataService.recordFinish(player, elapsed, hits, shots)
-	end
+	local hits, shots = ShootingService.getTotals(player)
+	DataService.recordFinish(player, elapsed, hits, shots)
 	log("%s finished #%d in %.3fs (penalty %ds)%s", player.Name, entry.place :: number, elapsed, penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
