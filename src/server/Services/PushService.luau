@@ -9,6 +9,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Modifier = require(ReplicatedStorage.Shared.Modifier)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local Knockback = require(script.Parent.Parent.Lib.Knockback)
@@ -121,10 +122,10 @@ local function onPushIntent(player: Player)
 	end
 
 	local away = (targetRoot.Position - root.Position) * Vector3.new(1, 0, 1)
-	Knockback.apply(targetRoot, away, C.Speed, C.UpSpeed, C.Duration)
+	Knockback.apply(targetRoot, away, C.Speed * Modifier.number("pushForce", 1), C.UpSpeed * Modifier.number("pushUp", 1), C.Duration)
 	knockedRemote:FireClient(target, C.KnockdownTime)
 	immuneUntil[target] = t + C.TargetImmunity
-	setReadyAt(player, t + C.Cooldown)
+	setReadyAt(player, t + Modifier.number("pushCooldown", C.Cooldown))
 	pushFxRemote:FireAllClients(player.UserId, target.UserId)
 	noticeRemote:FireClient(target, string.format("%s толкнул тебя!", player.DisplayName))
 	log("%s pushed %s", player.Name, target.Name)

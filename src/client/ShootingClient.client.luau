@@ -301,7 +301,7 @@ predictShot = function(state: AimState, t: number)
 	local pulse = numberAttr(Attributes.Pulse, Config.Stamina.StartPulse)
 	local yaw, pitch = Aim.crosshair(state.track, t, state.holds, pulse, state.stance)
 	local shot = Aim.cframe(state.eye, yaw, pitch)
-	local radius = C.TargetDiameter[state.stance] / 2
+	local radius = Aim.targetDiameter(state.stance) / 2
 	local index = Aim.findHit(shot.Position, shot.LookVector, state.targets, function(i)
 		return if isGolden(state.targets[i]) then radius * Config.Reward.GoldenSizeMultiplier else radius
 	end)

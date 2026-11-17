@@ -7,6 +7,7 @@
 -- Углы в градусах от направления глаз стрелка (на центральную мишень): yaw > 0 — вправо, pitch > 0 — вверх.
 
 local Config = require(script.Parent.Config)
+local Modifier = require(script.Parent.Modifier)
 
 local C = Config.Shooting
 
@@ -30,7 +31,17 @@ export type Hold = { start: number, finish: number }
 function Aim.pendulumSpeed(pulse: number, stance: Stance): number
 	local k = math.clamp((pulse - C.PendulumCalmPulse) / (C.PendulumTiredPulse - C.PendulumCalmPulse), 0, 1)
 	local period = C.PendulumPeriodCalm + (C.PendulumPeriodTired - C.PendulumPeriodCalm) * k
-	return 2 * math.pi / period * (C.StanceSpeedMultiplier[stance] or 1)
+	return 2 * math.pi / period * (C.StanceSpeedMultiplier[stance] or 1) * Modifier.number("pendulumSpeed", 1)
+end
+
+-- Диаметр мишени (модификатор «Большие мишени» увеличивает, но не больше targetMaxDiameter).
+function Aim.targetDiameter(stance: Stance): number
+	local base = C.TargetDiameter[stance]
+	local scaled = base * Modifier.number("targetScale", 1)
+	if scaled > base then
+		scaled = math.max(base, math.min(scaled, Modifier.number("targetMaxDiameter", math.huge)))
+	end
+	return scaled
 end
 
 function Aim.isHolding(holds: { Hold }, t: number): boolean
