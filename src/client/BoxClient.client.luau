@@ -2,7 +2,7 @@
 -- Секретные боксы у клиента (только картинка, всё решает сервер — BoxService):
 --  * боксы на трассе крутятся и покачиваются;
 --  * бокс взяли — вспышка конфетти у всех;
---  * свои бонусы — плашки под таймером: «💥 МЕГА-ТОЛЧОК 4.2» и «🎯 Большие мишени — на стрельбу».
+--  * свои бонусы — плашки у левого края: «💥 МЕГА-ТОЛЧОК 4.2», «🎯 Большие мишени»…
 -- Турбо из бокса показывает TurboFx (то же турбо, что за 5/5).
 
 local CollectionService = game:GetService("CollectionService")
@@ -58,15 +58,15 @@ gui.Name = "BoxHud"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- плашки — колонкой под надписью турбо, видимые идут подряд
+-- плашки — колонкой у левого края (центр экрана не закрываем), видимые идут подряд
 local column = Instance.new("Frame")
-column.AnchorPoint = Vector2.new(0.5, 0)
-column.Position = UDim2.new(0.5, 0, 0, 140)
-column.Size = UDim2.fromOffset(400, 200)
+column.AnchorPoint = Vector2.new(0, 0.5)
+column.Position = UDim2.new(0, 16, 0.4, 0)
+column.Size = UDim2.fromOffset(240, 140)
 column.BackgroundTransparency = 1
 column.Parent = gui
 local layout = Instance.new("UIListLayout")
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 layout.Padding = UDim.new(0, 4)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = column

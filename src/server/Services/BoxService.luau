@@ -96,9 +96,29 @@ end
 
 ---------------------------------------------------------------- бонусы
 
--- Бонус бесполезен прямо сейчас: «Большие мишени» уже есть или стрельб больше не будет.
+-- Есть ли рядом соперник в гонке (иначе мега-толчок некого толкать).
+local function rivalNear(player: Player, radius: number): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return false
+	end
+	for _, other in Players:GetPlayers() do
+		local oc = other ~= player and RaceManager.isParticipant(other) and ProgressTracker.isTracked(other) and other.Character
+		local oroot = oc and oc:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if oroot and (oroot.Position - root.Position).Magnitude <= radius then
+			return true
+		end
+	end
+	return false
+end
+
+-- Бонус бесполезен прямо сейчас: «Большие мишени» уже есть или стрельб больше не будет,
+-- мега-толчок без соперников рядом, второе дыхание при спокойном пульсе.
 local function isUseless(player: Player, effect: string): boolean
-	if effect == "BigTargets" then
+	if effect == "MegaPush" then
+		return not rivalNear(player, B.Defs.MegaPush.rivalRadius)
+	elseif effect == "BigTargets" then
 		return player:GetAttribute(Attributes.BigTargets) == true
 			or ShootingService.getCompletedStages(player) >= ShootingService.getRangeCount()
 	elseif effect == "SecondWind" then
@@ -120,7 +140,7 @@ local function isActive(player: Player, effect: string): boolean
 end
 
 -- Случайный бонус. По порядку ослабляем правила, пока есть из чего выбрать:
--- не бесполезный, не действующий, не прошлый → … → хоть какой-нибудь.
+-- не бесполезный, не действующий, не прошлый → … → не бесполезный (полезное есть всегда: −2 с).
 local function pickEffect(player: Player): string
 	local last = lastEffect[player]
 	local function filter(skipActive: boolean, skipLast: boolean): { string }
@@ -132,13 +152,13 @@ local function pickEffect(player: Player): string
 		end
 		return list
 	end
-	local pools = { filter(true, true), filter(true, false), filter(false, true), filter(false, false), B.Effects }
+	local pools = { filter(true, true), filter(true, false), filter(false, true), filter(false, false) }
 	for _, list in pools do
 		if #list > 0 then
 			return list[rng:NextInteger(1, #list)]
 		end
 	end
-	return B.Effects[1]
+	return "TimeBonus"
 end
 
 local function grant(player: Player, effect: string)
@@ -161,7 +181,7 @@ local function grant(player: Player, effect: string)
 	elseif effect == "TimeBonus" then
 		PenaltyService.add(player, -def.seconds)
 	end
-	noticeRemote:FireClient(player, string.format("%s %s!", def.icon, def.title))
+	noticeRemote:FireClient(player, string.format("%s %s — %s", def.icon, def.title, def.hint))
 end
 
 local function take(player: Player, spot: BasePart, box: BasePart)
