@@ -242,7 +242,7 @@ local Config = {
 			TimeBonus = { icon = "⏱", title = "−2 секунды", hint = "к итоговому времени", seconds = 2 }, -- к итоговому времени
 			-- подвохи (щит или призрак их гасят)
 			Snail = { icon = "🐌", title = "Улитка", hint = "медленнее 3 с", kind = "bad", seconds = 3, speed = 0.5 },
-			Invert = { icon = "🔄", title = "Наоборот", hint = "лево и право перепутаны 3 с", kind = "bad", seconds = 3 },
+			Invert = { icon = "🔄", title = "Наоборот", hint = "лево и право перепутаны 6 с", kind = "bad", seconds = 6 },
 			-- разное
 			Spring = { icon = "🦘", title = "Пружина", hint = "3 прыжка выше", jumps = 3, multiplier = 2.2, seconds = 20 }, -- JumpHeight ×; неистраченные прыжки сгорают через seconds
 			Roulette = { icon = "🎲", title = "Рулетка", hint = "что выпадет?", kind = "any" }, -- случайный бонус: подвох или польза 50/50
@@ -384,6 +384,7 @@ local Config = {
 		CheckpointTag = "Checkpoint", -- CollectionService-тег зоны начала препятствия (атрибут Order)
 		FallZoneTag = "FallZone", -- тег зоны падения (вода и т.п.)
 		KillY = -20, -- ниже этой высоты — тоже падение
+		ZoneColumnHeight = 60, -- стад над чекпоинтом/воротами/зоной велопарка, где ещё засчитываем (перепрыгнул — всё равно прошёл)
 		RespawnHeight = 3, -- на сколько выше пола чекпоинта ставим игрока
 	},
 }

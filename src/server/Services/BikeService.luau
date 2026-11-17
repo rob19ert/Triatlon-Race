@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Zone = require(script.Parent.Parent.Lib.Zone)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -40,11 +41,8 @@ local function log(fmt: string, ...: any)
 	print("[BikeService] " .. string.format(fmt, ...))
 end
 
-local function isInside(zone: BasePart, position: Vector3): boolean
-	local p = zone.CFrame:PointToObjectSpace(position)
-	local half = zone.Size / 2
-	return math.abs(p.X) <= half.X and math.abs(p.Y) <= half.Y and math.abs(p.Z) <= half.Z
-end
+-- зоны и ворота — «колонной»: перепрыгнуть нельзя
+local isInside = Zone.inColumn
 
 local function inTagged(tag: string, position: Vector3): boolean
 	for _, zone in CollectionService:GetTagged(tag) do

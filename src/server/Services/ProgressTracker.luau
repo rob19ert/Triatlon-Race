@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
+local Zone = require(script.Parent.Parent.Lib.Zone)
 
 local ProgressTracker = {}
 
@@ -35,11 +36,7 @@ local finishZone: BasePart
 local finishLine: BasePart
 local startGrid: BasePart
 
-local function isInside(zone: BasePart, position: Vector3): boolean
-	local localPos = zone.CFrame:PointToObjectSpace(position)
-	local half = zone.Size / 2
-	return math.abs(localPos.X) <= half.X and math.abs(localPos.Y) <= half.Y and math.abs(localPos.Z) <= half.Z
-end
+local isInside = Zone.inside
 
 local function getRoot(player: Player): BasePart?
 	local character = player.Character
@@ -90,7 +87,7 @@ local function updateCheckpoint(player: Player, progress: PlayerProgress, positi
 		if zone:IsA("BasePart") then
 			local order = zone:GetAttribute("Order")
 			-- только вперёд: вернувшись назад, чекпоинт не откатываем
-			if typeof(order) == "number" and order > progress.checkpointOrder and isInside(zone, position) then
+			if typeof(order) == "number" and order > progress.checkpointOrder and Zone.inColumn(zone, position) then
 				progress.checkpoint = zone
 				progress.checkpointOrder = order
 				print(string.format("[ProgressTracker] %s reached checkpoint %d", player.Name, order))
@@ -116,7 +113,7 @@ local function step()
 		local prevDist, prevClock = progress.lastLineDist, progress.lastClock
 		progress.lastLineDist, progress.lastClock = dist, clock
 
-		if dist <= 0 and isInside(finishZone, position) then
+		if dist <= 0 and Zone.inColumn(finishZone, position) then
 			-- доля кадра, на которой пересекли линию
 			local finishClock = clock
 			if prevDist and prevDist > 0 then
