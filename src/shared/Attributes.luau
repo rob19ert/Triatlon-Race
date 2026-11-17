@@ -3,6 +3,11 @@
 -- Пишет только сервер, клиент только читает.
 
 return {
+	ProfileFinishes = "ProfileFinishes",
+	ProfileXP = "ProfileXP",
+	ProfileLevel = "ProfileLevel",
+	ProfileBest = "ProfileBest",
+	ProfileAchievement = "ProfileAchievement",
 	Pulse = "Pulse", -- number 0–100; nil = пульс не отслеживается (не в гонке)
 	RedZone = "RedZone", -- boolean
 	Sprinting = "Sprinting", -- boolean, спринт реально работает (а не просто нажат)

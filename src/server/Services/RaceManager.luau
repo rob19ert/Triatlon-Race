@@ -24,6 +24,7 @@ local PushService: any
 local PodiumService: any
 local SpectatorService: any
 local ModifierService: any
+local DataService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -156,6 +157,10 @@ local function onPlayerFinished(player: Player, finishClock: number)
 		dnf = false,
 	}
 	local photo = insertFinisher(entry)
+	if ShootingService.getCompletedStages(player) == ShootingService.getRangeCount() then
+		local hits, shots = ShootingService.getTotals(player)
+		DataService.recordFinish(player, elapsed, hits, shots)
+	end
 	log("%s finished #%d in %.3fs (penalty %ds)%s", player.Name, entry.place :: number, elapsed, penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
@@ -454,6 +459,7 @@ function RaceManager.init(services: { [string]: any })
 	PodiumService = services.PodiumService
 	SpectatorService = services.SpectatorService
 	ModifierService = services.ModifierService
+	DataService = services.DataService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)

@@ -25,6 +25,7 @@ local SERVICE_ORDER = {
 	"IceService",
 	"BoxService",
 	"DevService",
+	"DataService",
 	"RaceManager",
 }
 

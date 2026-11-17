@@ -2,6 +2,18 @@
 -- Все игровые числа в одном месте. Это стартовые значения — крутим здесь, не в коде.
 
 local Config = {
+	Profile = {
+		StoreName = "RaceProfiles_v1",
+		UseStudioDataStore = false, -- true: отдельное тестовое хранилище Studio
+		FinishXP = 100,
+		XPPerLevel = 500,
+		VeteranFinishes = 10,
+		RecentResultLimit = 32,
+		SaveAttempts = 4,
+		RetryDelay = 1,
+		ShutdownWait = 25,
+	},
+
 	RaceHud = {
 		RightMargin = 8,
 		TimerTop = 8,
