@@ -56,6 +56,7 @@ local function publish(player: Player, profile: Profile)
 	player:SetAttribute(Attributes.ProfileLevel, math.floor(profile.xp / C.XPPerLevel) + 1)
 	player:SetAttribute(Attributes.ProfileAchievement, if profile.veteran then "Ветеран трассы" elseif profile.firstFinish then "Первый финиш" else nil)
 	player:SetAttribute(Attributes.ProfileFinishes, profile.finishes)
+	player:SetAttribute(Attributes.ProfileLoadFailed, nil)
 end
 
 local function request(operation: () -> any): (boolean, any)
@@ -84,6 +85,9 @@ local function load(player: Player)
 	if ok then
 		publish(player, normalize(value))
 	else
+		if player.Parent == Players and player:GetAttribute(Attributes.ProfileFinishes) == nil then
+			player:SetAttribute(Attributes.ProfileLoadFailed, true)
+		end
 		warn("[DataService] Load failed for", player.UserId, value)
 	end
 end

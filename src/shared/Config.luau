@@ -15,6 +15,10 @@ local Config = {
 	},
 
 	RaceHud = {
+		ProfileWidth = 360,
+		ProfileHeight = 78,
+		ProfileBottom = 16,
+		ProfileTextSize = 15,
 		RightMargin = 8,
 		TimerTop = 8,
 		TimerWidth = 220,

@@ -3,6 +3,7 @@
 -- Пишет только сервер, клиент только читает.
 
 return {
+	ProfileLoadFailed = "ProfileLoadFailed",
 	ProfileFinishes = "ProfileFinishes",
 	ProfileXP = "ProfileXP",
 	ProfileLevel = "ProfileLevel",

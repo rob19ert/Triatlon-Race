@@ -92,6 +92,26 @@ resultsText.TextYAlignment = Enum.TextYAlignment.Top
 resultsText.TextWrapped = true
 resultsText.Parent = resultsFrame
 
+local profileCard = Instance.new("TextLabel")
+profileCard.Name = "Profile"
+profileCard.AnchorPoint = Vector2.new(0.5, 1)
+profileCard.Position = UDim2.new(0.5, 0, 1, -H.ProfileBottom)
+profileCard.Size = UDim2.new(0.92, 0, 0, H.ProfileHeight)
+profileCard.BackgroundColor3 = status.BackgroundColor3
+profileCard.BackgroundTransparency = status.BackgroundTransparency
+profileCard.TextColor3 = status.TextColor3
+profileCard.Font = Enum.Font.GothamMedium
+profileCard.TextScaled = true
+profileCard.TextWrapped = true
+profileCard.Parent = gui
+Instance.new("UICorner", profileCard)
+local profileSize = Instance.new("UISizeConstraint")
+profileSize.MaxSize = Vector2.new(H.ProfileWidth, H.ProfileHeight)
+profileSize.Parent = profileCard
+local profileTextSize = Instance.new("UITextSizeConstraint")
+profileTextSize.MaxTextSize = H.ProfileTextSize
+profileTextSize.Parent = profileCard
+
 gui.Parent = player:WaitForChild("PlayerGui")
 
 ---------------------------------------------------------------- логика отображения
@@ -101,6 +121,37 @@ local function formatTime(seconds: number): string
 	local s = seconds - m * 60
 	return string.format("%d:%05.2f", m, s)
 end
+
+local function renderProfile()
+	local finishes = player:GetAttribute(Attributes.ProfileFinishes)
+	local xp = player:GetAttribute(Attributes.ProfileXP)
+	local level = player:GetAttribute(Attributes.ProfileLevel)
+	local best = player:GetAttribute(Attributes.ProfileBest)
+	local achievement = player:GetAttribute(Attributes.ProfileAchievement)
+	if typeof(finishes) ~= "number" or typeof(xp) ~= "number" or typeof(level) ~= "number" then
+		profileCard.Text = if player:GetAttribute(Attributes.ProfileLoadFailed) then "Профиль пока недоступен" else "Загрузка профиля…"
+		return
+	end
+	local xpPerLevel = Config.Profile.XPPerLevel
+	local record = if typeof(best) == "number" then formatTime(best) else "—"
+	local text = string.format("Уровень %d  •  %d / %d XP\nФиниши: %d  •  Рекорд: %s", level, xp % xpPerLevel, xpPerLevel, finishes, record)
+	if typeof(achievement) == "string" then
+		text ..= "\n" .. achievement
+	end
+	profileCard.Text = text
+end
+
+for _, attribute in {
+	Attributes.ProfileLoadFailed,
+	Attributes.ProfileFinishes,
+	Attributes.ProfileXP,
+	Attributes.ProfileLevel,
+	Attributes.ProfileBest,
+	Attributes.ProfileAchievement,
+} do
+	player:GetAttributeChangedSignal(attribute):Connect(renderProfile)
+end
+renderProfile()
 
 local function remaining(): number
 	if current.endsAt == 0 then
@@ -144,6 +195,7 @@ end
 
 Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Types.RaceStatePayload)
 	current = payload
+	profileCard.Visible = payload.state == "Lobby"
 	if payload.state == "Lobby" or payload.state == "Countdown" then
 		myTime = nil
 		resultsToken += 1
