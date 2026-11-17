@@ -30,6 +30,7 @@ type PlayerStamina = {
 	boostMultiplier: number,
 	slowUntil: number, -- os.clock() конца «Улитки»
 	slowMultiplier: number,
+	driftMultiplier: number, -- пока держит дрифт (<1)
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -144,6 +145,7 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if os.clock() < st.slowUntil then
 		speed *= st.slowMultiplier
 	end
+	speed *= st.driftMultiplier
 	if humanoid.WalkSpeed ~= speed then
 		humanoid.WalkSpeed = speed
 	end
@@ -191,6 +193,7 @@ function StaminaService.beginRace(players: { Player })
 			boostMultiplier = 1,
 			slowUntil = 0,
 			slowMultiplier = 1,
+			driftMultiplier = 1,
 			bike = false,
 			terrainMultiplier = 1,
 			lastVelY = 0,
@@ -242,13 +245,34 @@ function StaminaService.setTerrainMultiplier(player: Player, multiplier: number)
 	end
 end
 
--- Ускоритель на дороге: скорость ×multiplier на seconds (продлевается при повторном заезде).
+-- Ускоритель (дорожный или после дрифта): скорость ×multiplier на seconds (продлевается; сильнее не ослабляем).
 function StaminaService.grantBoost(player: Player, multiplier: number, seconds: number)
 	local st = active[player]
-	if st then
-		st.boostUntil = os.clock() + seconds
-		st.boostMultiplier = multiplier
+	if not st then
+		return
 	end
+	local t = os.clock()
+	-- сильнее уже действующего не ослабляем (дрифт поверх ускорителя): берём больший множитель
+	if t < st.boostUntil and st.boostMultiplier > multiplier then
+		st.boostUntil = math.max(st.boostUntil, t + seconds)
+		return
+	end
+	st.boostUntil = math.max(st.boostUntil, t + seconds)
+	st.boostMultiplier = multiplier
+end
+
+-- Дрифт: множитель скорости, пока держит (1 — не дрифтит).
+function StaminaService.setDrift(player: Player, multiplier: number)
+	local st = active[player]
+	if st then
+		st.driftMultiplier = multiplier
+	end
+end
+
+-- Покрытие под велосипедом: 1 — дорога, <1 — обочина.
+function StaminaService.getTerrainMultiplier(player: Player): number
+	local st = active[player]
+	return if st then st.terrainMultiplier else 1
 end
 
 -- «Улитка» из бокса: скорость ×multiplier на seconds.

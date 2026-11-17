@@ -19,6 +19,8 @@ return {
 	InvertUntil = "InvertUntil", -- number, server time конца «Наоборот» (бокс): лево/право перепутаны (клиент)
 	SpringJumps = "SpringJumps", -- number, сколько высоких прыжков осталось («Пружина», бокс)
 	BigTargets = "BigTargets", -- boolean, бонус «Большие мишени» на следующую стрельбу (бокс)
+	DriftTier = "DriftTier", -- number 0..3, держит дрифт на велосипеде (уровень искр); nil — не дрифтит
+	DriftBoostUntil = "DriftBoostUntil", -- number, server time конца ускорения после дрифта
 	Riding = "Riding", -- boolean, едет на велосипеде (nil — пешком)
 	PushReadyAt = "PushReadyAt", -- number, server time, когда снова можно толкать (nil — толчок недоступен, не в гонке)
 }

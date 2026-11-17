@@ -22,6 +22,7 @@ local SERVICE_ORDER = {
 	"SpectatorService",
 	"BikeTrackService",
 	"BikeService",
+	"DriftService",
 	"BoxService",
 	"DevService",
 	"RaceManager",
