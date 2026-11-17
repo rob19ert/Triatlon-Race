@@ -15,6 +15,9 @@ return {
 	ShieldUntil = "ShieldUntil", -- number, server time: щит гасит одно попадание (бокс); nil — нет/потрачен
 	GhostUntil = "GhostUntil", -- number, server time конца «Призрака» (бокс): сквозь препятствия и толчки
 	MegaPushUntil = "MegaPushUntil", -- number, server time конца бонуса «Мега-толчок» (бокс)
+	SnailUntil = "SnailUntil", -- number, server time конца «Улитки» (бокс): медленнее
+	InvertUntil = "InvertUntil", -- number, server time конца «Наоборот» (бокс): лево/право перепутаны (клиент)
+	SpringJumps = "SpringJumps", -- number, сколько высоких прыжков осталось («Пружина», бокс)
 	BigTargets = "BigTargets", -- boolean, бонус «Большие мишени» на следующую стрельбу (бокс)
 	Riding = "Riding", -- boolean, едет на велосипеде (nil — пешком)
 	PushReadyAt = "PushReadyAt", -- number, server time, когда снова можно толкать (nil — толчок недоступен, не в гонке)

@@ -4,7 +4,9 @@
 --  * участник на трассе (не на рубеже) проехал сквозь бокс — получает случайный бонус только себе,
 --    бокс пропадает у всех и через RespawnTime появляется в другой свободной точке;
 --  * бонусы: ⚡ Турбо (то же, что за 5/5), 💥 Мега-толчок на N секунд, 🎯 Большие мишени на следующую стрельбу,
---    🛡 Щит (одно попадание), 👻 Призрак (сквозь препятствия), 💚 Второе дыхание (пульс вниз), ⏱ −2 с.
+--    🛡 Щит (одно попадание), 👻 Призрак (сквозь препятствия), 💚 Второе дыхание (пульс вниз), ⏱ −2 с,
+--    🦘 Пружина (3 высоких прыжка), 🎲 Рулетка (случайный, подвох или польза);
+--  * подвохи: 🐌 Улитка, 🔄 Наоборот — лидеру чаще, последнему редко; щит/призрак их гасят.
 -- Боксы стоят всё время (и в лобби — видно, где они), брать можно только в гонке.
 
 local CollectionService = game:GetService("CollectionService")
@@ -15,6 +17,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local Protection = require(script.Parent.Parent.Lib.Protection)
 
 local B = Config.Boxes
 
@@ -33,6 +36,7 @@ local reserved: { [BasePart]: boolean } = {} -- точка ждёт респау
 local folder: Folder
 local rng = Random.new()
 local lastEffect: { [Player]: string } = {} -- последний выпавший бонус (не повторяем подряд)
+local springConn: { [Player]: RBXScriptConnection } = {}
 
 local function log(fmt: string, ...: any)
 	print("[BoxService] " .. string.format(fmt, ...))
@@ -133,19 +137,41 @@ local function isActive(player: Player, effect: string): boolean
 		elseif effect == "MegaPush" then Attributes.MegaPushUntil
 		elseif effect == "Shield" then Attributes.ShieldUntil
 		elseif effect == "Ghost" then Attributes.GhostUntil
+		elseif effect == "Snail" then Attributes.SnailUntil
+		elseif effect == "Invert" then Attributes.InvertUntil
 		else nil
+	if effect == "Spring" then
+		return (player:GetAttribute(Attributes.SpringJumps) or 0) :: number > 0
+	end
 	local v = name and player:GetAttribute(name)
 	return typeof(v) == "number" and v > workspace:GetServerTimeNow()
 end
 
+local function kindOf(effect: string): string
+	return ((B.Defs :: any)[effect].kind or "good") :: string
+end
+
+-- Шанс подвоха по месту: лидер — Leader, последний — Last, между ними плавно.
+local function badChance(player: Player): number
+	local place, count = RaceManager.getPlace(player)
+	if not place or count <= 1 then
+		return B.BadChance.Solo
+	end
+	local f = (place - 1) / (count - 1)
+	return B.BadChance.Leader + (B.BadChance.Last - B.BadChance.Leader) * f
+end
+
 -- Случайный бонус. По порядку ослабляем правила, пока есть из чего выбрать:
 -- не бесполезный, не действующий, не прошлый → … → не бесполезный (полезное есть всегда: −2 с).
-local function pickEffect(player: Player): string
+-- wantBad: true — только подвохи (и «any»), false — только польза (и «any»); nil — любой.
+local function pickEffect(player: Player, wantBad: boolean?, exclude: string?): string
 	local last = lastEffect[player]
 	local function filter(skipActive: boolean, skipLast: boolean): { string }
 		local list = {}
 		for _, effect in B.Effects do
-			if not isUseless(player, effect) and not (skipActive and isActive(player, effect)) and not (skipLast and effect == last) then
+			local kind = kindOf(effect)
+			local kindOk = wantBad == nil or kind == "any" or (kind == "bad") == wantBad
+			if effect ~= exclude and kindOk and not isUseless(player, effect) and not (skipActive and isActive(player, effect)) and not (skipLast and effect == last) then
 				table.insert(list, effect)
 			end
 		end
@@ -157,12 +183,70 @@ local function pickEffect(player: Player): string
 			return list[rng:NextInteger(1, #list)]
 		end
 	end
-	return "TimeBonus"
+	return if wantBad then pickEffect(player, nil, exclude) else "TimeBonus"
 end
 
-local function grant(player: Player, effect: string)
+-- «Пружина»: JumpHeight ×multiplier на jumps прыжков (или до конца seconds).
+local function endSpring(player: Player, humanoid: Humanoid?)
+	local conn = springConn[player]
+	if conn then
+		conn:Disconnect()
+		springConn[player] = nil
+		local mult = B.Defs.Spring.multiplier
+		if humanoid and humanoid.Parent then
+			humanoid.JumpHeight /= mult
+		end
+		log("%s spring over (%s jump(s) left)", player.Name, tostring(player:GetAttribute(Attributes.SpringJumps)))
+	end
+	player:SetAttribute(Attributes.SpringJumps, nil)
+end
+
+local function startSpring(player: Player)
+	local def = B.Defs.Spring
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	endSpring(player, humanoid)
+	humanoid.JumpHeight *= def.multiplier
+	player:SetAttribute(Attributes.SpringJumps, def.jumps)
+	springConn[player] = humanoid.StateChanged:Connect(function(_, new)
+		if new == Enum.HumanoidStateType.Jumping then
+			local left = ((player:GetAttribute(Attributes.SpringJumps) or 0) :: number) - 1
+			player:SetAttribute(Attributes.SpringJumps, left)
+			if left <= 0 then
+				-- дать оттолкнуться высоко, потом вернуть обычный прыжок
+				task.delay(0.3, endSpring, player, humanoid)
+			end
+		end
+	end)
+	local conn = springConn[player]
+	task.delay(def.seconds, function()
+		if springConn[player] == conn then
+			endSpring(player, humanoid)
+		end
+	end)
+end
+
+-- Выдать бонус. Возвращает, во что превратилась рулетка, и погашен ли подвох защитой.
+local function grant(player: Player, effect: string): (string?, boolean)
 	local def = (B.Defs :: any)[effect]
-	if effect == "Turbo" then
+	if effect == "Roulette" then
+		local rolled = pickEffect(player, rng:NextNumber() < 0.5, "Roulette")
+		local _, blocked = grant(player, rolled)
+		return rolled, blocked
+	end
+	if def.kind == "bad" and Protection.absorb(player) then
+		return nil, true
+	end
+	if effect == "Snail" then
+		StaminaService.grantSlow(player, def.speed, def.seconds)
+	elseif effect == "Invert" then
+		player:SetAttribute(Attributes.InvertUntil, workspace:GetServerTimeNow() + def.seconds)
+	elseif effect == "Spring" then
+		startSpring(player)
+	elseif effect == "Turbo" then
 		StaminaService.grantTurbo(player, def.seconds)
 	elseif effect == "MegaPush" then
 		player:SetAttribute(Attributes.MegaPushUntil, workspace:GetServerTimeNow() + def.seconds)
@@ -180,6 +264,7 @@ local function grant(player: Player, effect: string)
 	elseif effect == "TimeBonus" then
 		PenaltyService.add(player, -def.seconds)
 	end
+	return nil, false
 end
 
 local function take(player: Player, spot: BasePart, box: BasePart)
@@ -187,11 +272,11 @@ local function take(player: Player, spot: BasePart, box: BasePart)
 	reserved[spot] = true
 	local position = box.Position
 	box:Destroy()
-	local effect = pickEffect(player)
+	local effect = pickEffect(player, rng:NextNumber() < badChance(player))
 	lastEffect[player] = effect
-	grant(player, effect)
-	takenRemote:FireAllClients(position, player.UserId, effect)
-	log("%s took %s", player.Name, effect)
+	local rolled, blocked = grant(player, effect)
+	takenRemote:FireAllClients(position, player.UserId, effect, rolled, blocked)
+	log("%s took %s%s%s", player.Name, effect, if rolled then " -> " .. rolled else "", if blocked then " (blocked)" else "")
 	task.delay(B.RespawnTime, function()
 		spawnOne() -- сначала новая точка, потом освобождаем старую: бокс не вернётся туда же
 		reserved[spot] = nil
@@ -228,6 +313,9 @@ local function clearPlayerBonuses()
 		player:SetAttribute(Attributes.BigTargets, nil)
 		player:SetAttribute(Attributes.ShieldUntil, nil)
 		player:SetAttribute(Attributes.GhostUntil, nil)
+		player:SetAttribute(Attributes.InvertUntil, nil)
+		local character = player.Character
+		endSpring(player, character and character:FindFirstChildOfClass("Humanoid"))
 	end
 	table.clear(lastEffect)
 end
@@ -256,6 +344,11 @@ function BoxService.start()
 	log("%d spot(s), %d box(es)", #spots, math.min(B.Active, #spots))
 	Players.PlayerRemoving:Connect(function(player)
 		lastEffect[player] = nil
+		local conn = springConn[player]
+		if conn then
+			conn:Disconnect()
+			springConn[player] = nil
+		end
 	end)
 
 	local lastState = RaceManager.getState()

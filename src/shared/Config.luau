@@ -213,7 +213,9 @@ local Config = {
 		PickupRadius = 4.5, -- стад от центра бокса до корня персонажа
 		Size = 3,
 		Color = Color3.fromRGB(255, 190, 40),
-		Effects = { "Turbo", "MegaPush", "BigTargets", "Shield", "Ghost", "SecondWind", "TimeBonus" }, -- что может выпасть (поровну)
+		Effects = { "Turbo", "MegaPush", "BigTargets", "Shield", "Ghost", "SecondWind", "TimeBonus", "Snail", "Invert", "Spring", "Roulette" },
+		-- шанс подвоха (kind = "bad") по месту в гонке: лидеру чаще, последнему редко; одному в гонке — Solo
+		BadChance = { Leader = 0.4, Last = 0.05, Solo = 0.2 },
 		Defs = {
 			Turbo = { icon = "⚡", title = "Турбо", hint = "быстрее 5 с", seconds = 5 }, -- то же турбо, что за 5/5 (Config.Reward)
 			MegaPush = {
@@ -238,6 +240,12 @@ local Config = {
 			Ghost = { icon = "👻", title = "Призрак", hint = "сквозь препятствия 4 с", seconds = 4, transparency = 0.65 }, -- сквозь препятствия и толчки
 			SecondWind = { icon = "💚", title = "Второе дыхание", hint = "пульс вниз", pulse = 30, uselessBelow = 45 }, -- пульс сразу до pulse; ниже uselessBelow — не выдаём
 			TimeBonus = { icon = "⏱", title = "−2 секунды", hint = "к итоговому времени", seconds = 2 }, -- к итоговому времени
+			-- подвохи (щит или призрак их гасят)
+			Snail = { icon = "🐌", title = "Улитка", hint = "медленнее 3 с", kind = "bad", seconds = 3, speed = 0.5 },
+			Invert = { icon = "🔄", title = "Наоборот", hint = "лево и право перепутаны 3 с", kind = "bad", seconds = 3 },
+			-- разное
+			Spring = { icon = "🦘", title = "Пружина", hint = "3 прыжка выше", jumps = 3, multiplier = 2.2, seconds = 20 }, -- JumpHeight ×; неистраченные прыжки сгорают через seconds
+			Roulette = { icon = "🎲", title = "Рулетка", hint = "что выпадет?", kind = "any" }, -- случайный бонус: подвох или польза 50/50
 		},
 	},
 

@@ -97,19 +97,58 @@ local mega = pill(1, Color3.fromRGB(220, 60, 60))
 local ghostPill = pill(2, Color3.fromRGB(120, 110, 170))
 local shieldPill = pill(3, Color3.fromRGB(60, 170, 120))
 local big = pill(4, Color3.fromRGB(40, 140, 220))
+local springPill = pill(5, Color3.fromRGB(200, 120, 40))
+local snailPill = pill(6, Color3.fromRGB(110, 90, 60))
+local invertPill = pill(7, Color3.fromRGB(170, 60, 160))
 
 local function left(p: Player, name: string): number
 	local v = p:GetAttribute(name)
 	return if typeof(v) == "number" then v - workspace:GetServerTimeNow() else 0
 end
 
-Remotes.get(Remotes.Names.BoxTaken).OnClientEvent:Connect(function(position: Vector3, userId: number, effect: string)
-	Fx.burst("Confetti", position)
+local function describe(effect: string): string
 	local def = (D :: any)[effect]
-	if userId == player.UserId and def then
-		toast.Text = string.format("%s %s — %s", def.icon, def.title, def.hint)
-		toastUntil = os.clock() + TOAST_SECONDS
+	return if def then string.format("%s %s — %s", def.icon, def.title, def.hint) else effect
+end
+
+Remotes.get(Remotes.Names.BoxTaken).OnClientEvent:Connect(function(position: Vector3, userId: number, effect: string, rolled: string?, blocked: boolean?)
+	Fx.burst("Confetti", position)
+	if userId ~= player.UserId or not (D :: any)[effect] then
+		return
 	end
+	local shown = rolled or effect
+	local text = if blocked
+		then string.format("%s %s — щит погасил!", (D :: any)[shown].icon, (D :: any)[shown].title)
+		else describe(shown)
+	if rolled then
+		text = D.Roulette.icon .. " Рулетка → " .. text
+	end
+	toast.Text = text
+	toastUntil = os.clock() + TOAST_SECONDS
+end)
+
+---------------------------------------------------------------- «Наоборот»: лево и право перепутаны
+-- После штатного управления (клавиатура, стик, тач) зеркалим направление движения относительно камеры.
+RunService:BindToRenderStep("BoxInvert", Enum.RenderPriority.Input.Value + 1, function()
+	if left(player, Attributes.InvertUntil) <= 0 then
+		return
+	end
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local camera = workspace.CurrentCamera
+	if not humanoid or not camera then
+		return
+	end
+	local dir = humanoid.MoveDirection
+	if dir.Magnitude < 0.01 then
+		return
+	end
+	local right = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+	if right.Magnitude < 0.01 then
+		return
+	end
+	right = right.Unit
+	humanoid:Move(dir - 2 * dir:Dot(right) * right, false)
 end)
 
 ---------------------------------------------------------------- щит и призрак у всех
@@ -175,6 +214,21 @@ RunService.Heartbeat:Connect(function()
 	shieldPill.Visible = left(player, Attributes.ShieldUntil) > 0
 	if shieldPill.Visible then
 		shieldPill.Text = D.Shield.icon .. " Щит"
+	end
+	local jumps = player:GetAttribute(Attributes.SpringJumps)
+	springPill.Visible = typeof(jumps) == "number" and jumps > 0
+	if springPill.Visible then
+		springPill.Text = string.format("%s Пружина ×%d", D.Spring.icon, jumps :: number)
+	end
+	local snailLeft = left(player, Attributes.SnailUntil)
+	snailPill.Visible = snailLeft > 0
+	if snailLeft > 0 then
+		snailPill.Text = string.format("%s УЛИТКА %.1f", D.Snail.icon, snailLeft)
+	end
+	local invertLeft = left(player, Attributes.InvertUntil)
+	invertPill.Visible = invertLeft > 0
+	if invertLeft > 0 then
+		invertPill.Text = string.format("%s НАОБОРОТ %.1f", D.Invert.icon, invertLeft)
 	end
 	big.Visible = player:GetAttribute(Attributes.BigTargets) == true
 	if big.Visible then

@@ -44,6 +44,8 @@ local raceStartClock = 0 -- os.clock() для точного серверног�
 local participants: { [Player]: boolean } = {}
 local finishers: { ResultEntry } = {}
 local winnerFinishClock: number? = nil
+local places: { [Player]: number } = {} -- место в последней таблице (для шансов в боксах)
+local placeCount = 0
 
 local function log(fmt: string, ...: any)
 	print("[RaceManager] " .. string.format(fmt, ...))
@@ -231,6 +233,14 @@ local function publishStandings()
 
 	-- догонялка: последняя треть ещё бегущих
 	local n = #standings
+	table.clear(places)
+	placeCount = n
+	for _, entry in standings do
+		local player = Players:GetPlayerByUserId(entry.userId)
+		if player then
+			places[player] = entry.place
+		end
+	end
 	local slowFrom = n - math.ceil(n * Config.Stamina.CatchUpShare) + 1
 	for _, entry in standings do
 		local player = Players:GetPlayerByUserId(entry.userId)
@@ -424,6 +434,11 @@ end
 
 function RaceManager.getState(): RaceState
 	return state
+end
+
+-- Место игрока в гонке и сколько всего в таблице (nil — нет в таблице).
+function RaceManager.getPlace(player: Player): (number?, number)
+	return places[player], placeCount
 end
 
 function RaceManager.isParticipant(player: Player): boolean

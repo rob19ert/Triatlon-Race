@@ -28,6 +28,8 @@ type PlayerStamina = {
 	terrainMultiplier: number, -- обочина на велосипеде (<1), иначе 1
 	boostUntil: number, -- os.clock() конца ускорителя
 	boostMultiplier: number,
+	slowUntil: number, -- os.clock() конца «Улитки»
+	slowMultiplier: number,
 	lastVelY: number,
 	publishedPulse: number?,
 }
@@ -62,6 +64,7 @@ local function clearAttributes(player: Player)
 	player:SetAttribute(Attributes.RedZone, nil)
 	player:SetAttribute(Attributes.Sprinting, nil)
 	player:SetAttribute(Attributes.TurboUntil, nil)
+	player:SetAttribute(Attributes.SnailUntil, nil)
 end
 
 local function addPulse(st: PlayerStamina, delta: number)
@@ -138,6 +141,9 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 	if os.clock() < st.boostUntil then
 		speed *= st.boostMultiplier
 	end
+	if os.clock() < st.slowUntil then
+		speed *= st.slowMultiplier
+	end
 	if humanoid.WalkSpeed ~= speed then
 		humanoid.WalkSpeed = speed
 	end
@@ -183,6 +189,8 @@ function StaminaService.beginRace(players: { Player })
 			turboUntil = 0,
 			boostUntil = 0,
 			boostMultiplier = 1,
+			slowUntil = 0,
+			slowMultiplier = 1,
 			bike = false,
 			terrainMultiplier = 1,
 			lastVelY = 0,
@@ -241,6 +249,17 @@ function StaminaService.grantBoost(player: Player, multiplier: number, seconds: 
 		st.boostUntil = os.clock() + seconds
 		st.boostMultiplier = multiplier
 	end
+end
+
+-- «Улитка» из бокса: скорость ×multiplier на seconds.
+function StaminaService.grantSlow(player: Player, multiplier: number, seconds: number)
+	local st = active[player]
+	if not st then
+		return
+	end
+	st.slowUntil = os.clock() + seconds
+	st.slowMultiplier = multiplier
+	player:SetAttribute(Attributes.SnailUntil, workspace:GetServerTimeNow() + seconds)
 end
 
 -- Турбо: скорость ×TurboSpeedMultiplier на seconds секунд (награда за 5/5).
