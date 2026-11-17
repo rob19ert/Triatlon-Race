@@ -3,7 +3,8 @@
 --  * съезд с дороги: игрок на земле дальше OffRoadMargin от края дороги дольше OffRoadGrace —
 --    мгновенно ставим в ближайшую точку центральной линии той же дороги, лицом по ходу движения
 --    (не к чекпоинту!). В ямах под разрывами не трогаем — там зона падения (ProgressTracker);
---  * трамплины (тег LaunchPad): въехал на скорости — бросок вперёд и вверх;
+--  * трамплины (тег LaunchPad): въехал на скорости — бросок вперёд и вверх
+--    (атрибуты зоны Forward / Up / Time — свои числа, иначе из Config);
 --  * ускорители (тег BoostPad): скорость ×BoostMultiplier на BoostSeconds;
 --  * мост с падающими плитами (тег FallingPlate): наехал — плита мигает PlateWarnTime и падает,
 --    через PlateRespawnTime возвращается. Под мостом — зона падения (возврат к чекпоинту).
@@ -180,7 +181,11 @@ local function checkPads(player: Player, root: BasePart, now: number)
 	for _, zone in CollectionService:GetTagged(C.LaunchTag) do
 		if zone:IsA("BasePart") and isInside(zone, position) then
 			launchReadyAt[player] = now + C.LaunchCooldown
-			Knockback.apply(root, zone.CFrame.LookVector, math.max(speed, C.LaunchForwardSpeed), C.LaunchUpSpeed, C.LaunchTime)
+			-- у трамплина могут быть свои числа (срезки: прыжок длиннее), иначе — из Config
+			local forward = (zone:GetAttribute("Forward") :: number?) or C.LaunchForwardSpeed
+			local up = (zone:GetAttribute("Up") :: number?) or C.LaunchUpSpeed
+			local time = (zone:GetAttribute("Time") :: number?) or C.LaunchTime
+			Knockback.apply(root, zone.CFrame.LookVector, math.max(speed, forward), up, time)
 			return
 		end
 	end
