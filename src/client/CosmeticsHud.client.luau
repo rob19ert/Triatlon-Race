@@ -8,6 +8,7 @@ local Attributes = require(Shared:WaitForChild("Attributes"))
 local AllConfig = require(Shared:WaitForChild("Config"))
 local Config = AllConfig.Cosmetics
 local Remotes = require(Shared:WaitForChild("Remotes"))
+local BikeSkins = require(Shared:WaitForChild("BikeSkins"))
 
 local ShopPreview = require(script.Parent:WaitForChild("ShopPreview"))
 local player = Players.LocalPlayer
@@ -230,13 +231,15 @@ local function rarityOf(skin): any
 	return Config.Rarities[skin.rarity] or Config.Rarities.Common
 end
 
-local function owns(id: string): boolean
-	local owned = player:GetAttribute(Attributes.OwnedBikeSkins)
-	return typeof(owned) == "string" and table.find(string.split(owned, ","), id) ~= nil
-end
 local function unlocked(skin): boolean
-	local level = player:GetAttribute(Attributes.ProfileLevel)
-	return (typeof(level) == "number" and level >= skin.level) or owns(skin.id)
+	return BikeSkins.unlocked(player, skin)
+end
+
+-- Robux prices come from Roblox, so they are never hard-coded here.
+local prices: { [string]: number } = {}
+local function priceText(skin): string
+	local price = prices[skin.id]
+	return if price then string.format("R$ %d", price) else "R$"
 end
 
 type Tile = { button: TextButton, highlight: UIStroke, badge: TextLabel, lock: Frame }
@@ -326,7 +329,7 @@ local function stars(count: number): string
 end
 
 refresh = function()
-	local selected = player:GetAttribute(Attributes.BikeSkin)
+	local selected = BikeSkins.effective(player)
 	local level = player:GetAttribute(Attributes.ProfileLevel)
 	local loaded = typeof(level) == "number"
 
@@ -348,6 +351,11 @@ refresh = function()
 			tile.badge.Text = "✓"
 			tile.badge.BackgroundColor3 = MINT
 			tile.badge.Size = UDim2.fromOffset(28, 24)
+		elseif not isUnlocked and skin.robuxOnly then
+			tile.badge.Visible = true
+			tile.badge.Text = priceText(skin)
+			tile.badge.BackgroundColor3 = rgb(110, 225, 130)
+			tile.badge.Size = UDim2.fromOffset(78, 24)
 		elseif not isUnlocked then
 			tile.badge.Visible = true
 			tile.badge.Text = string.format("🔒 Ур. %d", skin.level)
@@ -374,7 +382,7 @@ refresh = function()
 	elseif isUnlocked then
 		action.Text, action.BackgroundColor3 = "ВЫБРАТЬ", GOLD
 	elseif skin.productId > 0 then
-		action.Text, action.BackgroundColor3 = "КУПИТЬ", rgb(110, 200, 255)
+		action.Text, action.BackgroundColor3 = "КУПИТЬ · " .. priceText(skin), rgb(110, 225, 130)
 	else
 		action.Text, action.BackgroundColor3, canAct = string.format("🔒 Уровень %d", skin.level), rgb(80, 92, 120), false
 	end
@@ -385,7 +393,7 @@ end
 
 action.Activated:Connect(function()
 	local skin = focused
-	if player:GetAttribute(Attributes.ProfileLevel) == nil or player:GetAttribute(Attributes.BikeSkin) == skin.id then
+	if player:GetAttribute(Attributes.ProfileLevel) == nil or BikeSkins.effective(player) == skin.id then
 		return
 	end
 	if unlocked(skin) then
@@ -394,6 +402,18 @@ action.Activated:Connect(function()
 		MarketplaceService:PromptProductPurchase(player, skin.productId)
 	end
 end)
+
+for _, skin in Config.BikeSkins do
+	if skin.productId > 0 then
+		task.spawn(function()
+			local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, skin.productId, Enum.InfoType.Product)
+			if ok and typeof(info) == "table" and typeof(info.PriceInRobux) == "number" then
+				prices[skin.id] = info.PriceInRobux
+				refresh()
+			end
+		end)
+	end
+end
 
 for _, name in { Attributes.BikeSkin, Attributes.ProfileLevel, Attributes.ProfileXP, Attributes.OwnedBikeSkins } do
 	player:GetAttributeChangedSignal(name):Connect(refresh)
@@ -409,7 +429,7 @@ local function setOpen(visible: boolean)
 end
 
 -- Start on the bike the player rides now.
-local current = player:GetAttribute(Attributes.BikeSkin)
+local current = BikeSkins.effective(player)
 for _, skin in Config.BikeSkins do
 	if skin.id == current then
 		focused = skin
@@ -419,7 +439,7 @@ focus(focused)
 layout()
 
 open.Activated:Connect(function()
-	local selected = player:GetAttribute(Attributes.BikeSkin)
+	local selected = BikeSkins.effective(player)
 	for _, skin in Config.BikeSkins do
 		if skin.id == selected then
 			focus(skin)

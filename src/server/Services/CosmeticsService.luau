@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage.Shared
 local Config = require(Shared.Config).Cosmetics
 local Attributes = require(Shared.Attributes)
 local Remotes = require(Shared.Remotes)
+local BikeSkins = require(Shared.BikeSkins)
 local CosmeticsService = {}
 local DataService: any
 local RaceManager: any
@@ -29,18 +30,19 @@ function CosmeticsService.start()
 		end
 		readyAt[player] = now + Config.SelectionCooldown
 		local level = player:GetAttribute(Attributes.ProfileLevel)
-		if typeof(level) ~= "number" or player:GetAttribute(Attributes.BikeSkin) == id then
+		if typeof(level) ~= "number" or BikeSkins.effective(player) == id then
 			return
 		end
 		for _, skin in Config.BikeSkins do
 			if skin.id == id then
 				local owned = player:GetAttribute(Attributes.OwnedBikeSkins)
 				local purchased = typeof(owned) == "string" and table.find(string.split(owned, ","), id) ~= nil
-				if level < skin.level and not purchased then
+				local requiredLevel = if skin.robuxOnly then math.huge else skin.level
+				if level < requiredLevel and not purchased then
 					return
 				end
 				selecting[player] = true
-				local success = DataService.selectBikeSkin(player, id, skin.level)
+				local success = DataService.selectBikeSkin(player, id, requiredLevel)
 				selecting[player] = nil
 				if not success and player.Parent == Players then
 					Remotes.get(Remotes.Names.Notice):FireClient(player, "Не удалось сохранить выбор велосипеда")

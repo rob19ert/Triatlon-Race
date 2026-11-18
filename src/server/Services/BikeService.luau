@@ -17,6 +17,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Zone = require(script.Parent.Parent.Lib.Zone)
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local BikeSkins = require(ReplicatedStorage.Shared.BikeSkins)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local C = Config.Bike
@@ -82,8 +83,7 @@ local function attachBike(player: Player, character: Model)
 	if not root or not humanoid then
 		return
 	end
-	local selected = player:GetAttribute(Attributes.BikeSkin)
-	local source = showroom:FindFirstChild(selected or "auto") or showroom:FindFirstChild("auto")
+	local source = showroom:FindFirstChild(BikeSkins.effective(player)) or showroom:FindFirstChild(BikeSkins.Default)
 	if not source or not source:IsA("Model") then
 		return
 	end

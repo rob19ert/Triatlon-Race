@@ -7,11 +7,12 @@ local Config = {
 		BikeSkins = {
 			{ id = "auto", title = "Бабл-круизер", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Пузыри в корзинке, ветер в волосах." },
 			{ id = "ice", title = "Орбита", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Говорят, однажды доехал до Луны и обратно." },
-			{ id = "ember", title = "Огненный дракон", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 0, rarity = "Rare", blurb = "Колёса горячие. Не трогать руками!" },
-			{ id = "lime", title = "Лесной странник", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 0, rarity = "Rare", blurb = "Пахнет хвоей и немного — победой." },
-			{ id = "violet", title = "Неоновая стрела", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 0, rarity = "Epic", blurb = "Светится даже днём. Особенно днём." },
-			{ id = "gold", title = "Паровой экспресс", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 0, rarity = "Legendary", blurb = "Чух-чух! Пар в комплект не входит." },
+			{ id = "ember", title = "Огненный дракон", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 3733029662, robuxOnly = true, rarity = "Rare", blurb = "Колёса горячие. Не трогать руками!" },
+			{ id = "lime", title = "Лесной странник", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 3733029484, robuxOnly = true, rarity = "Rare", blurb = "Пахнет хвоей и немного — победой." },
+			{ id = "violet", title = "Неоновая стрела", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 3733028459, robuxOnly = true, rarity = "Epic", blurb = "Светится даже днём. Особенно днём." },
+			{ id = "gold", title = "Паровой экспресс", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 3733029726, robuxOnly = true, rarity = "Legendary", blurb = "Чух-чух! Пар в комплект не входит." },
 		},
+		-- robuxOnly: открывается только покупкой (Developer Product), уровень не открывает
 		-- Редкость — только внешний вид, на езду не влияет
 		Rarities = {
 			Common = { title = "Обычный", stars = 1, color = Color3.fromRGB(150, 170, 195) },
