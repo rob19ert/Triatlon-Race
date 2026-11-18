@@ -5,12 +5,25 @@ local Config = {
 	Cosmetics = {
 		SelectionCooldown = 1,
 		BikeSkins = {
-			{ id = "auto", title = "Бабл-круизер", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0 },
-			{ id = "ice", title = "Орбита", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0 },
-			{ id = "ember", title = "Огненный дракон", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 0 },
-			{ id = "lime", title = "Лесной странник", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 0 },
-			{ id = "violet", title = "Неоновая стрела", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 0 },
-			{ id = "gold", title = "Паровой экспресс", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 0 },
+			{ id = "auto", title = "Бабл-круизер", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Пузыри в корзинке, ветер в волосах." },
+			{ id = "ice", title = "Орбита", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Говорят, однажды доехал до Луны и обратно." },
+			{ id = "ember", title = "Огненный дракон", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 0, rarity = "Rare", blurb = "Колёса горячие. Не трогать руками!" },
+			{ id = "lime", title = "Лесной странник", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 0, rarity = "Rare", blurb = "Пахнет хвоей и немного — победой." },
+			{ id = "violet", title = "Неоновая стрела", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 0, rarity = "Epic", blurb = "Светится даже днём. Особенно днём." },
+			{ id = "gold", title = "Паровой экспресс", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 0, rarity = "Legendary", blurb = "Чух-чух! Пар в комплект не входит." },
+		},
+		-- Редкость — только внешний вид, на езду не влияет
+		Rarities = {
+			Common = { title = "Обычный", stars = 1, color = Color3.fromRGB(150, 170, 195) },
+			Rare = { title = "Редкий", stars = 2, color = Color3.fromRGB(70, 160, 255) },
+			Epic = { title = "Эпический", stars = 3, color = Color3.fromRGB(180, 100, 255) },
+			Legendary = { title = "Легендарный", stars = 4, color = Color3.fromRGB(255, 185, 40) },
+		},
+		Showroom = {
+			SpinSpeed = 0.6, -- рад/с, автоповорот велосипеда на подиуме
+			DragSpeed = 0.012, -- рад на пиксель при вращении мышью / пальцем
+			ResumeSpinAfter = 2, -- с после отпускания
+			OpenTime = 0.18, -- с, анимация открытия
 		},
 	},
 
