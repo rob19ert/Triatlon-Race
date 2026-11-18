@@ -10,6 +10,7 @@ Remotes.createAll()
 local servicesFolder = script.Parent:WaitForChild("Services")
 
 local SERVICE_ORDER = {
+	"AnalyticsTracker",
 	"ThemeService",
 	"ModifierService",
 	"ProgressTracker",

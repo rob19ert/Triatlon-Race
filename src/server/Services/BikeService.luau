@@ -28,6 +28,7 @@ local RaceManager: any
 local ProgressTracker: any
 local ShootingService: any
 local StaminaService: any
+local AnalyticsTracker: any
 
 local riding: { [Player]: boolean } = {}
 local noticeRemote: RemoteEvent
@@ -113,6 +114,9 @@ local function setRiding(player: Player, on: boolean, reason: string)
 		detachBike(player.Character)
 	end
 	log("%s %s (%s)", player.Name, if on then "mounted" else "dismounted", reason)
+	if on then
+		AnalyticsTracker.bikeMounted(player)
+	end
 end
 
 ---------------------------------------------------------------- круг
@@ -211,6 +215,7 @@ function BikeService.init(services: { [string]: any })
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
+	AnalyticsTracker = services.AnalyticsTracker
 	noticeRemote = Remotes.get(Remotes.Names.Notice)
 end
 

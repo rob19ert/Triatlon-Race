@@ -11,12 +11,14 @@ local BikeSkins = require(Shared.BikeSkins)
 local CosmeticsService = {}
 local DataService: any
 local RaceManager: any
+local AnalyticsTracker: any
 local readyAt: { [Player]: number } = {}
 local selecting: { [Player]: boolean } = {}
 
 function CosmeticsService.init(services: { [string]: any })
 	DataService = services.DataService
 	RaceManager = services.RaceManager
+	AnalyticsTracker = services.AnalyticsTracker
 end
 
 function CosmeticsService.start()
@@ -44,6 +46,9 @@ function CosmeticsService.start()
 				selecting[player] = true
 				local success = DataService.selectBikeSkin(player, id, requiredLevel)
 				selecting[player] = nil
+				if success then
+					AnalyticsTracker.bikeSelected(player, id)
+				end
 				if not success and player.Parent == Players then
 					Remotes.get(Remotes.Names.Notice):FireClient(player, "Не удалось сохранить выбор велосипеда")
 				end
@@ -57,6 +62,7 @@ function CosmeticsService.start()
 			for _, skin in Config.BikeSkins do
 				if skin.productId > 0 and skin.productId == receipt.ProductId then
 					if DataService.grantBikeSkin(player, skin.id) then
+						AnalyticsTracker.bikePurchased(player, skin.id, receipt.CurrencySpent)
 						return Enum.ProductPurchaseDecision.PurchaseGranted
 					end
 					break

@@ -28,6 +28,14 @@ local Config = {
 		},
 	},
 
+	-- Аналитика Roblox (AnalyticsTracker): имена воронок и шагов видны на дашборде
+	Analytics = {
+		StudioLog = true, -- в Studio дублировать события в консоль
+		RaceFunnel = "Race",
+		RaceSteps = { "RaceStart", "FirstRangeDone", "BikeMounted", "SecondRangeDone", "Finished" },
+		OnboardingSteps = { "Joined", "FirstRaceStarted", "FirstRaceFinished" },
+	},
+
 	Profile = {
 		StoreName = "RaceProfiles_v1",
 		UseStudioDataStore = true, -- true: отдельное тестовое хранилище Studio

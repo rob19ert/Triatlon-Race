@@ -28,6 +28,7 @@ local ProgressTracker: any
 local ShootingService: any
 local StaminaService: any
 local PenaltyService: any
+local AnalyticsTracker: any
 local takenRemote: RemoteEvent
 
 local spots: { BasePart } = {}
@@ -277,6 +278,7 @@ local function take(player: Player, spot: BasePart, box: BasePart)
 	local rolled, blocked = grant(player, effect)
 	takenRemote:FireAllClients(position, player.UserId, effect, rolled, blocked)
 	log("%s took %s%s%s", player.Name, effect, if rolled then " -> " .. rolled else "", if blocked then " (blocked)" else "")
+	AnalyticsTracker.boxTaken(player, effect, rolled)
 	task.delay(B.RespawnTime, function()
 		spawnOne() -- сначала новая точка, потом освобождаем старую: бокс не вернётся туда же
 		reserved[spot] = nil
@@ -326,6 +328,7 @@ function BoxService.init(services: { [string]: any })
 	ShootingService = services.ShootingService
 	StaminaService = services.StaminaService
 	PenaltyService = services.PenaltyService
+	AnalyticsTracker = services.AnalyticsTracker
 	takenRemote = Remotes.get(Remotes.Names.BoxTaken)
 end
 

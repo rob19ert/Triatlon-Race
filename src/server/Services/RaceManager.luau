@@ -25,6 +25,7 @@ local PodiumService: any
 local SpectatorService: any
 local ModifierService: any
 local DataService: any
+local AnalyticsTracker: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -159,6 +160,7 @@ local function onPlayerFinished(player: Player, finishClock: number)
 	local photo = insertFinisher(entry)
 	local hits, shots = ShootingService.getTotals(player)
 	DataService.recordFinish(player, elapsed, hits, shots)
+	AnalyticsTracker.finished(player, entry.place :: number, elapsed)
 	log("%s finished #%d in %.3fs (penalty %ds)%s", player.Name, entry.place :: number, elapsed, penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
@@ -346,6 +348,7 @@ local function runRacing()
 	releaseAll()
 	setState("Racing", Config.Race.MaxRaceTime)
 	log("GO! %d participant(s)", #list)
+	AnalyticsTracker.raceStarted(list)
 
 	local nextStandingsAt = 0
 	while true do
@@ -381,6 +384,7 @@ local function buildResults(): { ResultEntry }
 	for player in participants do
 		if not isFinished(player) then
 			table.insert(results, { userId = player.UserId, name = player.Name, dnf = true, penalty = PenaltyService.getSeconds(player) })
+			AnalyticsTracker.dnf(player)
 		end
 	end
 	for _, entry in results do
@@ -458,6 +462,7 @@ function RaceManager.init(services: { [string]: any })
 	SpectatorService = services.SpectatorService
 	ModifierService = services.ModifierService
 	DataService = services.DataService
+	AnalyticsTracker = services.AnalyticsTracker
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)
