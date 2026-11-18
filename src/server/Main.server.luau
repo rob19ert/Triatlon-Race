@@ -23,6 +23,7 @@ local SERVICE_ORDER = {
 	"BikeTrackService",
 	"BikeService",
 	"IceService",
+	"MudRingService",
 	"BoxService",
 	"DevService",
 	"DataService",

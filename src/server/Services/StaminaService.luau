@@ -27,6 +27,7 @@ type PlayerStamina = {
 	bike: boolean, -- едет на велосипеде: свои скорости, педали вместо спринта, отдых на спуске
 	terrainMultiplier: number, -- обочина на велосипеде (<1), иначе 1
 	iceMultiplier: number, -- лёд на велосипеде (<1), иначе 1
+	mudMultiplier: number, -- лужа грязи на велосипеде (<1), иначе 1
 	boostUntil: number, -- os.clock() конца ускорителя
 	boostMultiplier: number,
 	slowUntil: number, -- os.clock() конца «Улитки»
@@ -131,7 +132,7 @@ local function updatePlayer(player: Player, st: PlayerStamina, dt: number)
 
 	local speed = if st.sprinting then Config.Movement.SprintSpeed else Config.Movement.WalkSpeed
 	if st.bike then
-		speed = (if st.sprinting then Config.Bike.PedalSpeed else Config.Bike.RideSpeed) * st.terrainMultiplier * st.iceMultiplier
+		speed = (if st.sprinting then Config.Bike.PedalSpeed else Config.Bike.RideSpeed) * st.terrainMultiplier * st.iceMultiplier * st.mudMultiplier
 	end
 	if st.redZone and not st.ignoreRedZonePenalty then
 		speed *= S.RedZoneSpeedMultiplier
@@ -195,6 +196,7 @@ function StaminaService.beginRace(players: { Player })
 			bike = false,
 			terrainMultiplier = 1,
 			iceMultiplier = 1,
+			mudMultiplier = 1,
 			lastVelY = 0,
 			publishedPulse = nil,
 		}
@@ -234,6 +236,7 @@ function StaminaService.setBike(player: Player, on: boolean)
 		st.bike = on
 		st.terrainMultiplier = 1
 		st.iceMultiplier = 1
+		st.mudMultiplier = 1
 	end
 end
 
@@ -250,6 +253,14 @@ function StaminaService.setIce(player: Player, multiplier: number)
 	local st = active[player]
 	if st then
 		st.iceMultiplier = multiplier
+	end
+end
+
+-- Лужа грязи: множитель скорости велосипеда (1 — не в луже).
+function StaminaService.setMud(player: Player, multiplier: number)
+	local st = active[player]
+	if st then
+		st.mudMultiplier = multiplier
 	end
 end
 

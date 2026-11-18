@@ -19,6 +19,7 @@ local Remotes = {
 		Standings = "Standings", -- {Types.StandingEntry} таблица позиций во время гонки
 		PushFx = "PushFx", -- (pusherUserId: number, targetUserId: number) анимация толчка у всех; target 0 — мимо
 		BoxTaken = "BoxTaken", -- (position: Vector3, userId: number, effect: string) бокс взят — вспышка у всех
+		RingPassed = "RingPassed", -- (ring: BasePart, userId: number) пролетел сквозь кольцо — вспышка у всех
 		KnockedDown = "KnockedDown", -- (duration: number) сбили препятствием — упасть и встать (только сбитому)
 
 		-- клиент -> сервер (намерения, сервер проверяет)
