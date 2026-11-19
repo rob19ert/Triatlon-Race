@@ -24,10 +24,11 @@ local HazardService = {}
 local RaceManager: any
 local ProgressTracker: any
 local ShootingService: any
+local BotService: any
 local knockedRemote: RemoteEvent
 
 local hazards: { HazardMotion.Hazard } = {}
-local immuneUntil: { [Player]: number } = {}
+local immuneUntil: { [any]: number } = {} -- игрок или бот
 
 local function log(fmt: string, ...: any)
 	print("[HazardService] " .. string.format(fmt, ...))
@@ -120,6 +121,22 @@ local function step()
 			log("%s knocked down", player.Name)
 		end
 	end
+	for _, bot in BotService.getBots() do
+		if not BotService.isRunning(bot) or now < (immuneUntil[bot] or 0) then
+			continue
+		end
+		local direction = findHit(bot.root.Position, t)
+		if direction then
+			immuneUntil[bot] = now + H.HitImmunity
+			if BotService.dodges(bot) then
+				continue
+			end
+			immuneUntil[bot] = now + Config.Bots.KnockImmunity
+			Knockback.apply(bot.root, direction, H.KnockSpeed, H.KnockUpSpeed, H.KnockImpulseTime)
+			BotService.knockDown(bot, H.KnockdownTime)
+			log("%s knocked down", bot.name)
+		end
+	end
 end
 
 local function loadTagged(tag: string, kind: HazardMotion.Kind)
@@ -137,6 +154,7 @@ function HazardService.init(services: { [string]: any })
 	RaceManager = services.RaceManager
 	ProgressTracker = services.ProgressTracker
 	ShootingService = services.ShootingService
+	BotService = services.BotService
 	knockedRemote = Remotes.get(Remotes.Names.KnockedDown)
 end
 

@@ -45,13 +45,14 @@ export type Bot = {
 	id: number, -- отрицательный: не пересекается с UserId игроков
 	name: string,
 	slot: number, -- стартовый номер (своя полоса на рубеже)
-	profile: { run: number, bike: number, accuracy: number, shotGap: { number } },
+	profile: { run: number, bike: number, accuracy: number, shotGap: { number }, dodge: number },
 	model: Model,
 	humanoid: Humanoid,
 	root: BasePart,
 	state: "Waiting" | "Run" | "Shooting" | "Finished",
 	index: number, -- следующая точка маршрута
 	spawnIndex: number,
+	falls: number, -- падений в воду с текущей точки Spawn
 	riding: boolean,
 	stages: number, -- завершённые стрельбы
 	penalty: number,
@@ -63,6 +64,7 @@ export type Bot = {
 	progressAt: number,
 	jumpAt: number,
 	moveIssuedAt: number,
+	knockedUntil: number, -- сбит препятствием: лежит до этого os.clock()
 	lastLineDist: number?,
 	lastClock: number,
 	tracks: { [string]: AnimationTrack },
@@ -227,6 +229,15 @@ end
 
 ---------------------------------------------------------------- движение
 
+-- Разморозить и оставить физику серверу: у замороженной детали владельца не задать,
+-- а без этого бота подхватывает клиент ближайшего игрока и MoveTo идёт рывками.
+local function release(bot: Bot)
+	bot.root.Anchored = false
+	pcall(function()
+		bot.root:SetNetworkOwner(nil)
+	end)
+end
+
 local function setRiding(bot: Bot, on: boolean)
 	bot.riding = on
 	bot.model:SetAttribute("Riding", if on then true else nil)
@@ -281,6 +292,7 @@ local function shoot(bot: Bot, order: number)
 	if bot.state ~= "Shooting" or not cf then
 		return
 	end
+	bot.humanoid:Move(Vector3.zero)
 	bot.humanoid:MoveTo(bot.root.Position)
 	bot.root.AssemblyLinearVelocity = Vector3.zero
 	bot.model:PivotTo(cf)
@@ -320,7 +332,7 @@ local function shoot(bot: Bot, order: number)
 	if bot.state ~= "Shooting" then
 		return
 	end
-	bot.root.Anchored = false
+	release(bot)
 	bot.stages += 1
 	bot.state = "Run"
 	resetProgress(bot)
@@ -333,6 +345,7 @@ local function finish(bot: Bot, finishClock: number)
 	local elapsed = finishClock - bot.startClock + bot.penalty
 	log("%s finished in %.2fs (penalty %ds, shooting %d/%d)", bot.name, elapsed, bot.penalty, bot.hits, bot.shots)
 	-- пробежать чуть дальше линии и остановиться
+	bot.humanoid:Move(Vector3.zero)
 	bot.humanoid:MoveTo(bot.root.Position + Vector3.new(0, 0, -4))
 	finishedEvent:Fire(bot, finishClock)
 end
@@ -340,6 +353,7 @@ end
 local function arrive(bot: Bot, wp: Waypoint)
 	if wp.spawn then
 		bot.spawnIndex = bot.index
+		bot.falls = 0
 	end
 	if wp.jump then
 		bot.humanoid.Jump = true
@@ -347,6 +361,9 @@ local function arrive(bot: Bot, wp: Waypoint)
 	end
 	bot.index += 1
 	resetProgress(bot)
+	if wp.action then
+		log("%s %s at %.1fs", bot.name, wp.action .. (if wp.range then tostring(wp.range) else ""), os.clock() - bot.startClock)
+	end
 	if wp.action == "Range" and wp.range then
 		bot.state = "Shooting"
 		task.spawn(shoot, bot, wp.range)
@@ -355,6 +372,15 @@ local function arrive(bot: Bot, wp: Waypoint)
 	elseif wp.action == "Dismount" then
 		setRiding(bot, false)
 	end
+end
+
+-- Прыжковый участок: к точке прыжка и от неё. Там — точный MoveTo (останавливается в точке,
+-- в том числе в воздухе, — приземляется на платформу) и скорость не выше CarefulSpeed;
+-- на остальной трассе — непрерывный Move по направлению (без торможения у каждой точки).
+local function isCareful(index: number): boolean
+	local wp = waypoints[index]
+	local prev = waypoints[index - 1]
+	return (wp ~= nil and wp.jump) or (prev ~= nil and prev.jump)
 end
 
 local function lineDistance(position: Vector3): number
@@ -381,10 +407,33 @@ local function stepBot(bot: Bot, now: number)
 	end
 
 	if inFallZone(pos) then
-		log("%s fell -> point %d", bot.name, bot.spawnIndex)
-		teleportTo(bot, bot.spawnIndex)
-		bot.index = bot.spawnIndex + 1
+		bot.falls += 1
+		local target = bot.spawnIndex
+		if bot.falls >= B.MaxFalls then
+			-- не мучаем: «доплыл» до следующей точки Spawn
+			for i = bot.spawnIndex + 1, #waypoints do
+				if waypoints[i].spawn then
+					target = i
+					break
+				end
+			end
+			bot.spawnIndex = target
+			bot.falls = 0
+		end
+		log("%s fell -> point %d", bot.name, target)
+		teleportTo(bot, target)
+		bot.index = target + 1
 		return
+	end
+
+	-- сбит: лежит, потом встаёт и бежит дальше
+	if bot.knockedUntil > 0 then
+		if now < bot.knockedUntil then
+			return
+		end
+		bot.knockedUntil = 0
+		bot.humanoid.PlatformStand = false
+		resetProgress(bot)
 	end
 
 	local wp = waypoints[bot.index]
@@ -405,9 +454,21 @@ local function stepBot(bot: Bot, now: number)
 		return
 	end
 
-	if now - bot.moveIssuedAt > 0.5 then
-		bot.humanoid:MoveTo(wp.pos)
-		bot.moveIssuedAt = now
+	local speed = if bot.riding then bot.profile.bike else bot.profile.run
+	local careful = isCareful(bot.index)
+	if careful then
+		speed = math.min(speed, B.CarefulSpeed)
+	end
+	if bot.humanoid.WalkSpeed ~= speed then
+		bot.humanoid.WalkSpeed = speed
+	end
+	if careful then
+		if now - bot.moveIssuedAt > 0.5 then
+			bot.humanoid:MoveTo(wp.pos)
+			bot.moveIssuedAt = now
+		end
+	else
+		bot.humanoid:Move(toWp.Unit)
 	end
 
 	-- низкое препятствие прямо по курсу (бревно, стенка) — прыжок
@@ -476,9 +537,6 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 	root.Anchored = true
 	model:SetAttribute("BotId", nextId)
 	model.Parent = folder
-	pcall(function()
-		root:SetNetworkOwner(nil)
-	end)
 	local bot: Bot = {
 		id = nextId,
 		name = B.NamePrefix .. name,
@@ -490,6 +548,7 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 		state = "Waiting",
 		index = 1,
 		spawnIndex = 1,
+		falls = 0,
 		riding = false,
 		stages = 0,
 		penalty = 0,
@@ -501,6 +560,7 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 		progressAt = 0,
 		jumpAt = 0,
 		moveIssuedAt = 0,
+		knockedUntil = 0,
 		lastLineDist = nil,
 		lastClock = 0,
 		tracks = loadTracks(humanoid),
@@ -518,7 +578,7 @@ function BotService.go(startClock: number)
 		if bot.state == "Waiting" then
 			bot.state = "Run"
 			bot.startClock = startClock
-			bot.root.Anchored = false
+			release(bot)
 			resetProgress(bot)
 		end
 	end
@@ -542,11 +602,30 @@ function BotService.getProgress(bot: Bot): (Types.RacePhase, number)
 	return ProgressTracker.scoreFor(bot.stages, bot.state == "Shooting", bot.stageShots, bot.root.Position)
 end
 
+-- Бот бежит по трассе (не на рубеже, не финишировал) — его могут сбить препятствия и толкнуть.
+function BotService.isRunning(bot: Bot): boolean
+	return bot.state == "Run" and bot.model.Parent ~= nil
+end
+
+-- Попал под препятствие: увернулся ли (шанс по профилю — боты не ловят тайминг, как игрок).
+function BotService.dodges(bot: Bot): boolean
+	return rng:NextNumber() < bot.profile.dodge
+end
+
+-- Сбит (маятник, мельница, поезд, толчок): падает на seconds, отлёт задаёт вызывающий (Knockback).
+function BotService.knockDown(bot: Bot, seconds: number)
+	bot.knockedUntil = os.clock() + seconds
+	bot.humanoid.PlatformStand = true
+	bot.humanoid:Move(Vector3.zero)
+	bot.humanoid:MoveTo(bot.root.Position)
+end
+
 -- Гонка кончилась: кто ещё бежит — останавливается (на подиум и в итоги — как есть).
 function BotService.stopAll()
 	for _, bot in bots do
 		if bot.state ~= "Finished" then
 			bot.state = "Finished"
+			bot.humanoid:Move(Vector3.zero)
 			bot.humanoid:MoveTo(bot.root.Position)
 		end
 	end
@@ -591,7 +670,7 @@ function BotService.start()
 				if bot then
 					bot.state = "Run"
 					bot.startClock = os.clock()
-					bot.root.Anchored = false
+					release(bot)
 					resetProgress(bot)
 				end
 			end)

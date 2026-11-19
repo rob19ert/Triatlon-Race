@@ -4,6 +4,7 @@
 -- Порядок гонщиков берём из таблицы позиций (Standings). Сервер переносит ReplicationFocus
 -- на выбранного гонщика (SpectatorService), чтобы его персонаж подгрузился при стриминге.
 
+local CollectionService = game:GetService("CollectionService")
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -158,8 +159,19 @@ local function update()
 	local entry = list[i]
 	sendFocus(targetUserId)
 
-	local target = Players:GetPlayerByUserId(targetUserId)
-	local character = target and target.Character
+	local character: Model? = nil
+	if targetUserId > 0 then
+		local target = Players:GetPlayerByUserId(targetUserId)
+		character = target and target.Character
+	else
+		-- бот: модель с тем же BotId
+		for _, model in CollectionService:GetTagged(Config.Bots.Tag) do
+			if model:IsA("Model") and model:GetAttribute("BotId") == targetUserId then
+				character = model
+				break
+			end
+		end
+	end
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid and camera.CameraSubject ~= humanoid then
 		camera.CameraSubject = humanoid

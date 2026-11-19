@@ -13,6 +13,7 @@ local SpectatorService = {}
 
 local RaceManager: any
 local ProgressTracker: any
+local BotService: any
 
 local function getRoot(player: Player): BasePart?
 	local character = player.Character
@@ -23,12 +24,15 @@ local function onSpectateFocus(player: Player, targetUserId: unknown)
 	if typeof(targetUserId) ~= "number" then
 		return
 	end
+	local watching = RaceManager.getState() == "Racing" and not ProgressTracker.isTracked(player)
+	-- бот (отрицательный id)
+	if (targetUserId :: number) < 0 then
+		local bot = BotService.getById(targetUserId)
+		player.ReplicationFocus = if watching and bot and bot.state ~= "Finished" then bot.root else nil
+		return
+	end
 	local target = if targetUserId ~= 0 then Players:GetPlayerByUserId(targetUserId) else nil
-	local allowed = RaceManager.getState() == "Racing"
-		and not ProgressTracker.isTracked(player)
-		and target ~= nil
-		and target ~= player
-		and ProgressTracker.isTracked(target)
+	local allowed = watching and target ~= nil and target ~= player and ProgressTracker.isTracked(target)
 	player.ReplicationFocus = if allowed and target then getRoot(target) else nil
 end
 
@@ -42,6 +46,7 @@ end
 function SpectatorService.init(services: { [string]: any })
 	RaceManager = services.RaceManager
 	ProgressTracker = services.ProgressTracker
+	BotService = services.BotService
 end
 
 function SpectatorService.start()
