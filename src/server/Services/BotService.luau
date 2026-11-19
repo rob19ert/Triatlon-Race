@@ -587,7 +587,7 @@ function BotService.start()
 			local base = if grid then grid.Position else Vector3.new(0, 0, -20)
 			local pos = base + Vector3.new(((count - 1) % 5 - 2) * 4, 3, 0)
 			task.spawn(function()
-				local bot = BotService.spawn(count + 3, profiles[(count - 1) % 3 + 1], CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1)))
+				local bot = BotService.spawn(count + B.FillTo, profiles[(count - 1) % 3 + 1], CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1)))
 				if bot then
 					bot.state = "Run"
 					bot.startClock = os.clock()
