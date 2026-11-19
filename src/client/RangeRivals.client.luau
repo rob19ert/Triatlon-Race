@@ -2,6 +2,7 @@
 -- Точки над головой каждого стреляющего — ●●●○○ (белая — попал, красная — промах, серая — ещё не стрелял).
 -- Данные — атрибуты RangeOrder/RangeMarks от сервера. Общая плашка «как в трансляции» — ShootingBroadcast.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,23 +26,24 @@ local function marksText(marks: string): string
 	return table.concat(parts)
 end
 
-local function rangeOf(p: Player): number?
+-- key — игрок или модель бота (у бота атрибуты на самой модели)
+local function rangeOf(p: Instance): number?
 	local v = p:GetAttribute(Attributes.RangeOrder)
 	return if typeof(v) == "number" then v else nil
 end
 
-local function marksOf(p: Player): string
+local function marksOf(p: Instance): string
 	local v = p:GetAttribute(Attributes.RangeMarks)
 	return if typeof(v) == "string" then v else ""
 end
 
 ---------------------------------------------------------------- точки над головой
 
-local overheads: { [Player]: BillboardGui } = {}
+local overheads: { [Instance]: BillboardGui } = {}
 
-local function updateOverhead(p: Player)
+local function updateOverhead(p: Instance)
 	local range = rangeOf(p)
-	local character = p.Character
+	local character = if p:IsA("Player") then p.Character else p
 	local head = character and character:FindFirstChild("Head")
 	local gui = overheads[p]
 	if not range or not head or p == player then
@@ -105,3 +107,26 @@ Players.PlayerRemoving:Connect(function(p)
 		overheads[p] = nil
 	end
 end)
+
+-- боты
+local function removeOverhead(model: Instance)
+	local gui = overheads[model]
+	if gui then
+		gui:Destroy()
+		overheads[model] = nil
+	end
+end
+local function watchBot(model: Instance)
+	model:GetAttributeChangedSignal(Attributes.RangeOrder):Connect(function()
+		updateOverhead(model)
+	end)
+	model:GetAttributeChangedSignal(Attributes.RangeMarks):Connect(function()
+		updateOverhead(model)
+	end)
+	updateOverhead(model)
+end
+for _, model in CollectionService:GetTagged(Config.Bots.Tag) do
+	watchBot(model)
+end
+CollectionService:GetInstanceAddedSignal(Config.Bots.Tag):Connect(watchBot)
+CollectionService:GetInstanceRemovedSignal(Config.Bots.Tag):Connect(removeOverhead)

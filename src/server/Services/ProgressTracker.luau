@@ -176,18 +176,24 @@ end
 -- Прогресс игрока для таблицы позиций: фаза и число «чем больше, тем дальше».
 -- Порядок внутри одной стрельбы k: бег к рубежу < стрельба < бег после рубежа.
 local STAGE = 3e6
-local function distanceAlongTrack(player: Player): number
-	local root = getRoot(player)
-	-- трасса идёт от старта вдоль -Z
-	return if root then math.max(0, startGrid.Position.Z - root.Position.Z) else 0
+
+-- completed — завершённые стрельбы, shooting/shotsFired — сейчас на рубеже; трасса идёт от старта вдоль -Z.
+function ProgressTracker.scoreFor(completed: number, shooting: boolean, shotsFired: number, position: Vector3?): (Types.RacePhase, number)
+	if shooting then
+		return "Shooting", completed * STAGE + 1e6 + shotsFired
+	end
+	local distance = if position then math.max(0, startGrid.Position.Z - position.Z) else 0
+	return "Run", completed * STAGE + distance
 end
 
 function ProgressTracker.getProgress(player: Player): (Types.RacePhase, number)
-	local completed = ShootingService.getCompletedStages(player)
-	if ShootingService.isShooting(player) then
-		return "Shooting", completed * STAGE + 1e6 + ShootingService.getShotsFired(player)
-	end
-	return "Run", completed * STAGE + distanceAlongTrack(player)
+	local root = getRoot(player)
+	return ProgressTracker.scoreFor(
+		ShootingService.getCompletedStages(player),
+		ShootingService.isShooting(player),
+		ShootingService.getShotsFired(player),
+		if root then root.Position else nil
+	)
 end
 
 function ProgressTracker.init(services: { [string]: any })

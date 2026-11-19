@@ -230,6 +230,10 @@ local Config = {
 	-- (атрибуты Order, Jump — прыжок с этой точки, Spawn — точка возврата после падения,
 	-- Action = Range (+Range = номер стрельбы) / Mount / Dismount / Finish, Bike — участок круга).
 	Bots = {
+		Enabled = true,
+		FillTo = 4, -- на старте меньше участников — добиваем ботами до стольких
+		Lineup = { "Fast", "Medium", "Slow" }, -- силы ботов (перемешиваются, берутся по очереди)
+		WaitAfterHumans = 12, -- с: все люди финишировали — ждём ботов не дольше, остальным DNF
 		Tag = "BotRacer", -- CollectionService-тег модели бота (клиенты рисуют велосипед и позу)
 		PathFolder = "BotPath",
 		FolderName = "Bots", -- Workspace/Bots — модели ботов

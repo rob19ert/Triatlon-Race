@@ -15,6 +15,7 @@ local STAND_HEIGHT = 3 -- HumanoidRootPart над верхом ступени
 local PodiumService = {}
 
 local podium: Model?
+local BotService: any
 
 function PodiumService.show(results: { Types.ResultEntry })
 	if not podium then
@@ -28,7 +29,8 @@ function PodiumService.show(results: { Types.ResultEntry })
 		end
 		local spot = podium:FindFirstChild("Spot" .. place) :: BasePart?
 		local player = Players:GetPlayerByUserId(entry.userId)
-		local character = player and player.Character
+		local bot = if player then nil else BotService.getById(entry.userId)
+		local character = if player then player.Character elseif bot then bot.model else nil
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not spot or not character or not root then
 			continue
@@ -39,6 +41,10 @@ function PodiumService.show(results: { Types.ResultEntry })
 		root.Anchored = true
 		character:PivotTo(CFrame.lookAt(pos, look))
 	end
+end
+
+function PodiumService.init(services: { [string]: any })
+	BotService = services.BotService
 end
 
 function PodiumService.start()

@@ -62,6 +62,9 @@ local function thumbnail(userId: number): string
 		return cached
 	end
 	thumbs[userId] = "" -- чтобы не запрашивать повторно, пока грузится
+	if userId <= 0 then
+		return "" -- бот: аватарки нет
+	end
 	task.spawn(function()
 		local ok, url = pcall(function()
 			return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
@@ -73,14 +76,27 @@ local function thumbnail(userId: number): string
 	return ""
 end
 
-local function sync(p: Player)
+-- боты: BotId (отрицательный) -> модель
+local botModels: { [number]: Model } = {}
+
+local function identity(p: Instance): (number, string)
+	if p:IsA("Player") then
+		return p.UserId, p.DisplayName
+	end
+	local humanoid = p:FindFirstChildOfClass("Humanoid")
+	local id = p:GetAttribute("BotId")
+	return if typeof(id) == "number" then id else 0, if humanoid then humanoid.DisplayName else p.Name
+end
+
+local function sync(p: Instance)
 	local range = p:GetAttribute(Attributes.RangeOrder)
 	local marks = p:GetAttribute(Attributes.RangeMarks)
-	local s = shooters[p.UserId]
+	local userId, displayName = identity(p)
+	local s = shooters[userId]
 	if typeof(range) == "number" then
 		if not s or s.range ~= range or s.leftAt then
-			s = { userId = p.UserId, name = p.DisplayName, range = range, marks = "", arrivedAt = os.clock(), leftAt = nil }
-			shooters[p.UserId] = s
+			s = { userId = userId, name = displayName, range = range, marks = "", arrivedAt = os.clock(), leftAt = nil }
+			shooters[userId] = s
 		end
 		local sh = s :: Shooter
 		sh.marks = if typeof(marks) == "string" then marks else sh.marks
@@ -89,7 +105,7 @@ local function sync(p: Player)
 	end
 end
 
-local function watch(p: Player)
+local function watch(p: Instance)
 	p:GetAttributeChangedSignal(Attributes.RangeOrder):Connect(function()
 		sync(p)
 	end)
@@ -102,6 +118,29 @@ for _, p in Players:GetPlayers() do
 	watch(p)
 end
 Players.PlayerAdded:Connect(watch)
+
+local function watchBot(model: Instance)
+	local id = model:GetAttribute("BotId")
+	if typeof(id) == "number" and model:IsA("Model") then
+		botModels[id] = model
+		watch(model)
+	end
+end
+for _, model in CollectionService:GetTagged(Config.Bots.Tag) do
+	watchBot(model)
+end
+CollectionService:GetInstanceAddedSignal(Config.Bots.Tag):Connect(watchBot)
+CollectionService:GetInstanceRemovedSignal(Config.Bots.Tag):Connect(function(model)
+	local id = model:GetAttribute("BotId")
+	if typeof(id) == "number" then
+		botModels[id] = nil
+	end
+end)
+
+-- игрок или модель бота по userId (у бота — BotId)
+local function racerById(userId: number): Instance?
+	return if userId > 0 then Players:GetPlayerByUserId(userId) else botModels[userId]
+end
 
 ---------------------------------------------------------------- вёрстка
 
@@ -297,7 +336,7 @@ local function render()
 	for userId, s in shooters do
 		if s.leftAt and now - s.leftAt > LEAVE_SECONDS then
 			shooters[userId] = nil
-		elseif not Players:GetPlayerByUserId(userId) then
+		elseif not racerById(userId) then
 			shooters[userId] = nil
 		else
 			byRange[s.range] = byRange[s.range] or {}
@@ -338,7 +377,7 @@ local function render()
 			row.frame.Size = UDim2.new(1, 0, 0, rowH)
 			paintDots(row, s.marks)
 			row.name.Text = s.name
-			local p = Players:GetPlayerByUserId(s.userId)
+			local p = racerById(s.userId)
 			local pen = p and p:GetAttribute(Attributes.PenaltyTime)
 			local penNum = if typeof(pen) == "number" then pen else 0
 			row.penalty.Text = Format.penalty(penNum, true)

@@ -26,6 +26,7 @@ local SpectatorService: any
 local ModifierService: any
 local DataService: any
 local AnalyticsTracker: any
+local BotService: any
 
 local raceStateRemote: RemoteEvent
 local raceResultsRemote: RemoteEvent
@@ -81,25 +82,50 @@ local function getRoot(player: Player): BasePart?
 	return if character then character:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
 end
 
--- Расставить игроков на стартовой решётке и заморозить (Anchored) до старта.
-local function placeOnGrid(players: { Player })
+-- Место i на стартовой решётке (сетка смотрит вдоль -Z, к финишу).
+local function gridCFrame(i: number): CFrame
 	local track = workspace:WaitForChild(Config.Track.FolderName)
 	local grid = track:WaitForChild(Config.Track.StartGridName) :: BasePart
 	local spacing = Config.Track.GridSpacing
 	local rowSize = Config.Track.GridRowSize
+	local col = (i - 1) % rowSize
+	local row = (i - 1) // rowSize
+	local x = (col - (rowSize - 1) / 2) * spacing
+	local z = row * spacing
+	local pos = grid.Position + Vector3.new(x, 3, z)
+	return CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1))
+end
 
+-- Расставить игроков на стартовой решётке и заморозить (Anchored) до старта.
+local function placeOnGrid(players: { Player })
 	for i, player in players do
 		local root = getRoot(player)
 		if root then
-			local col = (i - 1) % rowSize
-			local row = (i - 1) // rowSize
-			local x = (col - (rowSize - 1) / 2) * spacing
-			local z = row * spacing
-			-- сетка смотрит вдоль -Z (к финишу)
-			local pos = grid.Position + Vector3.new(x, 3, z)
 			root.Anchored = true
-			root.CFrame = CFrame.lookAt(pos, pos + Vector3.new(0, 0, -1))
+			root.CFrame = gridCFrame(i)
 		end
+	end
+end
+
+-- Мало людей — добиваем ботами до Bots.FillTo (места на решётке — после людей).
+local function spawnBots(humans: number)
+	local B = Config.Bots
+	if not B.Enabled then
+		return
+	end
+	local count = math.min(B.FillTo, Config.Race.MaxPlayers) - humans
+	if count <= 0 then
+		return
+	end
+	local lineup = table.clone(B.Lineup)
+	local rng = Random.new()
+	for i = #lineup, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		lineup[i], lineup[j] = lineup[j], lineup[i]
+	end
+	for k = 1, count do
+		local slot = humans + k
+		BotService.spawn(slot, lineup[(k - 1) % #lineup + 1], gridCFrame(slot))
 	end
 end
 
@@ -175,6 +201,32 @@ local function onPlayerFinished(player: Player, finishClock: number)
 	end
 end
 
+local function onBotFinished(bot: any, finishClock: number)
+	if state ~= "Racing" then
+		return
+	end
+	local elapsed = finishClock - raceStartClock + bot.penalty
+	local entry: ResultEntry = {
+		userId = bot.id,
+		name = bot.name,
+		place = 0,
+		time = elapsed,
+		penalty = bot.penalty,
+		dnf = false,
+	}
+	local photo = insertFinisher(entry)
+	log("%s (bot) finished #%d in %.3fs (penalty %ds)%s", bot.name, entry.place :: number, elapsed, bot.penalty, if photo then " (PHOTO FINISH)" else "")
+	playerFinishedRemote:FireAllClients(entry)
+	if photo then
+		noticeRemote:FireAllClients("📸 Фотофиниш!")
+	end
+	if not winnerFinishClock then
+		winnerFinishClock = os.clock()
+		stateEndsAt = now() + DNF_AFTER_WINNER
+		raceStateRemote:FireAllClients(statePayload())
+	end
+end
+
 local function isFinished(player: Player): boolean
 	for _, entry in finishers do
 		if entry.userId == player.UserId then
@@ -211,6 +263,28 @@ local function computeStandings(): { Types.StandingEntry }
 			local phase, score = ProgressTracker.getProgress(player)
 			table.insert(rows, {
 				entry = { userId = player.UserId, name = player.Name, place = 0, phase = phase, penalty = PenaltyService.getSeconds(player) },
+				finishPlace = nil,
+				score = score,
+			})
+		end
+	end
+	for _, bot in BotService.getBots() do
+		local fin: ResultEntry? = nil
+		for _, entry in finishers do
+			if entry.userId == bot.id then
+				fin = entry
+			end
+		end
+		if fin then
+			table.insert(rows, {
+				entry = { userId = bot.id, name = bot.name, place = 0, phase = "Finished", penalty = fin.penalty or 0, time = fin.time },
+				finishPlace = fin.place,
+				score = 0,
+			})
+		else
+			local phase, score = BotService.getProgress(bot)
+			table.insert(rows, {
+				entry = { userId = bot.id, name = bot.name, place = 0, phase = phase, penalty = bot.penalty },
 				finishPlace = nil,
 				score = score,
 			})
@@ -324,6 +398,7 @@ local function runCountdown(): boolean
 	end
 
 	placeOnGrid(list)
+	spawnBots(#list)
 	setState("Countdown", Config.Race.CountdownTime)
 	for i = Config.Race.CountdownTime, 1, -1 do
 		log("%d...", i)
@@ -346,11 +421,13 @@ local function runRacing()
 	PenaltyService.beginRace(list)
 	PushService.beginRace(list)
 	releaseAll()
+	BotService.go(raceStartClock)
 	setState("Racing", Config.Race.MaxRaceTime)
 	log("GO! %d participant(s)", #list)
 	AnalyticsTracker.raceStarted(list)
 
 	local nextStandingsAt = 0
+	local humansDoneAt: number? = nil
 	while true do
 		task.wait(0.1)
 		local t = os.clock()
@@ -358,9 +435,33 @@ local function runRacing()
 			nextStandingsAt = t + Config.Race.StandingsInterval
 			publishStandings()
 		end
-		if #finishers >= countParticipants() then
+		-- конец: все финишировали; люди финишировали — ботов ждём не дольше Bots.WaitAfterHumans
+		local humansLeft = 0
+		for player in participants do
+			if not isFinished(player) then
+				humansLeft += 1
+			end
+		end
+		local botsLeft = 0
+		for _, bot in BotService.getBots() do
+			if bot.state ~= "Finished" then
+				botsLeft += 1
+			end
+		end
+		if humansLeft == 0 and botsLeft == 0 then
 			log("All participants finished")
 			break
+		end
+		if humansLeft == 0 then
+			if countParticipants() == 0 then
+				log("No players left")
+				break
+			end
+			humansDoneAt = humansDoneAt or t
+			if t - (humansDoneAt :: number) >= Config.Bots.WaitAfterHumans then
+				log("All players finished — bots out of time")
+				break
+			end
 		end
 		if winnerFinishClock and t - winnerFinishClock >= DNF_AFTER_WINNER then
 			log("DNF timeout after winner")
@@ -372,6 +473,7 @@ local function runRacing()
 		end
 	end
 	publishStandings() -- финальный порядок
+	BotService.stopAll()
 	PushService.endRace()
 	SpectatorService.reset()
 	ProgressTracker.reset()
@@ -387,10 +489,24 @@ local function buildResults(): { ResultEntry }
 			AnalyticsTracker.dnf(player)
 		end
 	end
+	for _, bot in BotService.getBots() do
+		local finished = false
+		for _, entry in finishers do
+			if entry.userId == bot.id then
+				finished = true
+			end
+		end
+		if not finished then
+			table.insert(results, { userId = bot.id, name = bot.name, dnf = true, penalty = bot.penalty })
+		end
+	end
 	for _, entry in results do
 		local player = Players:GetPlayerByUserId(entry.userId)
+		local bot = if player then nil else BotService.getById(entry.userId)
 		if player then
 			entry.hits, entry.shots = ShootingService.getTotals(player)
+		elseif bot then
+			entry.hits, entry.shots = bot.hits, bot.shots
 		end
 	end
 	ShootingService.endRace()
@@ -417,6 +533,7 @@ local function runResults()
 
 	-- вернуть всех в лобби
 	ModifierService.clear()
+	BotService.clear()
 	raceStartedAt = 0
 	table.clear(participants)
 	for _, player in Players:GetPlayers() do
@@ -433,6 +550,7 @@ local function raceLoop()
 			runResults()
 		else
 			ModifierService.clear()
+			BotService.clear()
 		end
 	end
 end
@@ -463,6 +581,7 @@ function RaceManager.init(services: { [string]: any })
 	ModifierService = services.ModifierService
 	DataService = services.DataService
 	AnalyticsTracker = services.AnalyticsTracker
+	BotService = services.BotService
 	raceStateRemote = Remotes.get(Remotes.Names.RaceState)
 	raceResultsRemote = Remotes.get(Remotes.Names.RaceResults)
 	playerFinishedRemote = Remotes.get(Remotes.Names.PlayerFinished)
@@ -472,6 +591,7 @@ end
 
 function RaceManager.start()
 	ProgressTracker.Finished:Connect(onPlayerFinished)
+	BotService.Finished:Connect(onBotFinished)
 
 	-- зашедшим позже сразу шлём текущее состояние
 	Players.PlayerAdded:Connect(function(player)

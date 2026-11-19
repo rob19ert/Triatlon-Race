@@ -16,6 +16,8 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
+local Types = require(ReplicatedStorage.Shared.Types)
 local Zone = require(script.Parent.Parent.Lib.Zone)
 
 local B = Config.Bots
@@ -24,6 +26,7 @@ local BotService = {}
 
 local ShootingService: any
 local BikeService: any
+local ProgressTracker: any
 
 local finishedEvent = Instance.new("BindableEvent")
 -- (bot: Bot, finishClock: number) — бот пересёк финиш (os.clock() момента пересечения)
@@ -54,6 +57,7 @@ export type Bot = {
 	penalty: number,
 	hits: number,
 	shots: number,
+	stageShots: number, -- выстрелов на текущем рубеже (для таблицы позиций)
 	startClock: number,
 	bestDist: number,
 	progressAt: number,
@@ -281,6 +285,10 @@ local function shoot(bot: Bot, order: number)
 	bot.root.AssemblyLinearVelocity = Vector3.zero
 	bot.model:PivotTo(cf)
 	bot.root.Anchored = true
+	bot.stageShots = 0
+	-- как у игроков: точки над головой и строка в «трансляции» (RangeRivals, ShootingBroadcast)
+	bot.model:SetAttribute(Attributes.RangeOrder, order)
+	bot.model:SetAttribute(Attributes.RangeMarks, "")
 	task.wait(B.AimTime)
 	local closed = 0
 	local hits = 0
@@ -291,17 +299,24 @@ local function shoot(bot: Bot, order: number)
 			return
 		end
 		bot.shots += 1
-		if rng:NextNumber() < bot.profile.accuracy and closed < targets then
+		bot.stageShots += 1
+		local hit = rng:NextNumber() < bot.profile.accuracy and closed < targets
+		if hit then
 			closed += 1
 			hits += 1
 			bot.hits += 1
 			ShootingService.botCloseTarget(order, lane, closed)
 		else
 			bot.penalty += Config.Penalty.SecondsPerMiss
+			bot.model:SetAttribute(Attributes.PenaltyTime, bot.penalty)
 		end
+		bot.model:SetAttribute(Attributes.RangeMarks, (bot.model:GetAttribute(Attributes.RangeMarks) or "") .. (if hit then "H" else "M"))
 	end
 	task.wait(Config.Shooting.FinishDelay)
 	ShootingService.botReleaseLane(order, lane, bot)
+	bot.model:SetAttribute(Attributes.RangeOrder, nil)
+	bot.model:SetAttribute(Attributes.RangeMarks, nil)
+	bot.stageShots = 0
 	if bot.state ~= "Shooting" then
 		return
 	end
@@ -459,6 +474,7 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 	humanoid.WalkSpeed = profile.run
 	model:PivotTo(cf)
 	root.Anchored = true
+	model:SetAttribute("BotId", nextId)
 	model.Parent = folder
 	pcall(function()
 		root:SetNetworkOwner(nil)
@@ -479,6 +495,7 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 		penalty = 0,
 		hits = 0,
 		shots = 0,
+		stageShots = 0,
 		startClock = 0,
 		bestDist = math.huge,
 		progressAt = 0,
@@ -511,6 +528,30 @@ function BotService.getBots(): { Bot }
 	return bots
 end
 
+function BotService.getById(id: number): Bot?
+	for _, bot in bots do
+		if bot.id == id then
+			return bot
+		end
+	end
+	return nil
+end
+
+-- Для таблицы позиций — та же шкала, что у игроков (ProgressTracker).
+function BotService.getProgress(bot: Bot): (Types.RacePhase, number)
+	return ProgressTracker.scoreFor(bot.stages, bot.state == "Shooting", bot.stageShots, bot.root.Position)
+end
+
+-- Гонка кончилась: кто ещё бежит — останавливается (на подиум и в итоги — как есть).
+function BotService.stopAll()
+	for _, bot in bots do
+		if bot.state ~= "Finished" then
+			bot.state = "Finished"
+			bot.humanoid:MoveTo(bot.root.Position)
+		end
+	end
+end
+
 function BotService.clear()
 	for _, bot in bots do
 		bot.state = "Finished"
@@ -522,6 +563,7 @@ end
 function BotService.init(services: { [string]: any })
 	ShootingService = services.ShootingService
 	BikeService = services.BikeService
+	ProgressTracker = services.ProgressTracker
 end
 
 function BotService.start()
