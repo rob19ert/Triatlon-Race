@@ -4,6 +4,7 @@
 -- Поза — через Transform суставов поверх анимации (как толчок в PushFx), каждый кадр в Stepped.
 -- Модель вешает сервер (BikeService) внутрь персонажа под именем Config.Bike.ModelName.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -45,7 +46,7 @@ type State = {
 	crank: Motor6D?,
 }
 
-local states: { [Player]: State } = {}
+local states: { [Instance]: State } = {} -- по игроку или модели бота
 
 local function buildRig(character: Model): Rig
 	local arms = math.rad(C.PoseArmsDeg)
@@ -80,18 +81,18 @@ local function motor(bike: Model, name: string): Motor6D?
 	return if found and found:IsA("Motor6D") then found else nil
 end
 
-local function stateFor(player: Player): State?
-	if player:GetAttribute(Attributes.Riding) ~= true then
-		states[player] = nil
+-- key — игрок или модель бота (у бота атрибут Riding на самой модели).
+local function stateFor(key: Instance, character: Model?, riding: boolean): State?
+	if not riding then
+		states[key] = nil
 		return nil
 	end
-	local character = player.Character
 	local bike = character and character:FindFirstChild(C.ModelName) :: Model?
 	if not character or not bike then
-		states[player] = nil
+		states[key] = nil
 		return nil
 	end
-	local st = states[player]
+	local st = states[key]
 	if st and st.character == character and st.bike == bike then
 		return st
 	end
@@ -104,7 +105,7 @@ local function stateFor(player: Player): State?
 		rear = motor(bike, "RearWheelMotor"),
 		crank = motor(bike, "CrankMotor"),
 	}
-	states[player] = st
+	states[key] = st
 	return st
 end
 
@@ -137,12 +138,27 @@ local function pose(st: State)
 	end
 end
 
-RunService.Stepped:Connect(function(_, dt: number)
+local function riders(): { State }
+	local list = {}
 	for _, player in Players:GetPlayers() do
-		local st = stateFor(player)
-		if not st then
-			continue
+		local st = stateFor(player, player.Character, player:GetAttribute(Attributes.Riding) == true)
+		if st then
+			table.insert(list, st)
 		end
+	end
+	for _, model in CollectionService:GetTagged(Config.Bots.Tag) do
+		if model:IsA("Model") then
+			local st = stateFor(model, model, model:GetAttribute("Riding") == true)
+			if st then
+				table.insert(list, st)
+			end
+		end
+	end
+	return list
+end
+
+RunService.Stepped:Connect(function(_, dt: number)
+	for _, st in riders() do
 		local root = st.character:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if root then
 			local v = root.AssemblyLinearVelocity
@@ -166,4 +182,8 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	states[player] = nil
+end)
+
+CollectionService:GetInstanceRemovedSignal(Config.Bots.Tag):Connect(function(model)
+	states[model] = nil
 end)

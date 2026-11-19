@@ -1,5 +1,6 @@
 --!strict
--- Только Studio: G — перенестись к финишной линии, B — в велопарк с засчитанной первой стрельбой (см. DevService).
+-- Только Studio: G — перенестись к финишной линии, B — в велопарк с засчитанной первой стрельбой (см. DevService),
+-- N — выпустить тестового бота со старта (BotService).
 
 local RunService = game:GetService("RunService")
 if not RunService:IsStudio() then
@@ -29,3 +30,11 @@ ContextActionService:BindAction("DevToBike", function(_, state)
 	end
 	return Enum.ContextActionResult.Pass
 end, false, Config.Dev.ToBikeKey)
+
+local spawnBot = Remotes.get(Remotes.Names.DevSpawnBot)
+ContextActionService:BindAction("DevSpawnBot", function(_, state)
+	if state == Enum.UserInputState.Begin then
+		spawnBot:FireServer()
+	end
+	return Enum.ContextActionResult.Pass
+end, false, Config.Dev.SpawnBotKey)

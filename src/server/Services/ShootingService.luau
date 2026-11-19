@@ -73,7 +73,7 @@ export type StageResult = { hits: number, misses: number }
 local ranges: { Range } = {}
 local racers: { [Player]: number } = {} -- игрок -> стартовый номер (определяет «свой» рубеж)
 local sessions: { [Player]: Session } = {}
-local laneOccupant: { [Lane]: Player } = {}
+local laneOccupant: { [Lane]: any } = {} -- Player или бот (BotService)
 local results: { [Player]: { [number]: StageResult } } = {} -- по Order стрельбища
 
 local remoteStarted: RemoteEvent
@@ -483,6 +483,7 @@ function ShootingService.endRace()
 	for player, session in sessions do
 		endSession(player, session)
 	end
+	table.clear(laneOccupant) -- и полосы ботов
 	table.clear(racers)
 	table.clear(results)
 end
@@ -509,6 +510,66 @@ function ShootingService.getCompletedStages(player: Player): number
 		n += 1
 	end
 	return n
+end
+
+---------------------------------------------------------------- боты (BotService)
+-- Бот не стреляет «по-настоящему»: занимает полосу (её не отдадут игроку), закрывает мишени, освобождает.
+
+local function findRange(order: number): Range?
+	for _, range in ranges do
+		if range.order == order then
+			return range
+		end
+	end
+	return nil
+end
+
+local function findLane(range: Range, index: number): Lane?
+	for _, lane in range.lanes do
+		if lane.index == index then
+			return lane
+		end
+	end
+	return nil
+end
+
+-- Занять полосу: свою по стартовому номеру или ближайшую свободную. Возвращает CFrame корня
+-- (на месте стрелка, лицом к мишеням), номер полосы и число мишеней; nil — всё занято.
+function ShootingService.botClaimLane(rangeOrder: number, slot: number, owner: any, position: Vector3): (CFrame?, number?, number?)
+	local range = findRange(rangeOrder)
+	if not range or #range.lanes == 0 then
+		return nil
+	end
+	local lane = range.lanes[(slot - 1) % #range.lanes + 1]
+	if laneOccupant[lane] then
+		lane = nearestFreeLane(range, position) :: any
+	end
+	if not lane then
+		return nil
+	end
+	laneOccupant[lane] = owner
+	resetLaneTargets(lane, range.stance, false)
+	local eye = lane.eye.CFrame
+	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
+	local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
+	return CFrame.lookAt(rootPos, rootPos + look), lane.index, #lane.targets
+end
+
+function ShootingService.botCloseTarget(rangeOrder: number, laneIndex: number, targetIndex: number)
+	local range = findRange(rangeOrder)
+	local lane = range and findLane(range, laneIndex)
+	local target = lane and lane.targets[targetIndex]
+	if target then
+		target.Color = C.TargetClosedColor
+	end
+end
+
+function ShootingService.botReleaseLane(rangeOrder: number, laneIndex: number, owner: any)
+	local range = findRange(rangeOrder)
+	local lane = range and findLane(range, laneIndex)
+	if lane and laneOccupant[lane] == owner then
+		laneOccupant[lane] = nil
+	end
 end
 
 -- Сколько стрельбищ на трассе.

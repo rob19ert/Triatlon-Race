@@ -226,6 +226,59 @@ local Config = {
 		NextKey = Enum.KeyCode.Right,
 	},
 
+	-- Боты-соперники (BotService): NPC проходят трассу по точкам Track/BotPath
+	-- (атрибуты Order, Jump — прыжок с этой точки, Spawn — точка возврата после падения,
+	-- Action = Range (+Range = номер стрельбы) / Mount / Dismount / Finish, Bike — участок круга).
+	Bots = {
+		Tag = "BotRacer", -- CollectionService-тег модели бота (клиенты рисуют велосипед и позу)
+		PathFolder = "BotPath",
+		FolderName = "Bots", -- Workspace/Bots — модели ботов
+		NamePrefix = "🤖 ",
+		Names = { "Max", "Lena", "Tim", "Sasha", "Kira", "Leo", "Mia", "Nik", "Zoe", "Gus", "Ola", "Rex" },
+		ArriveDistance = 2, -- стад по горизонтали: точка достигнута
+		ProbeDistance = 2.5, -- стад: впереди препятствие ниже MaxStepUp — подпрыгнуть
+		MaxStepUp = 6,
+		StuckJumpAfter = 1.2, -- с без продвижения к точке — прыжок
+		StuckSkipAfter = 8, -- с без продвижения — перенос на точку (не застревать навсегда)
+		MinProgress = 0.5, -- стад: меньше за StuckJumpAfter — «не продвигается»
+		AimTime = 1.2, -- с, перед первым выстрелом
+		MissPopup = "+3 с",
+		-- сила: скорость бега и езды, точность (доля попаданий), пауза между выстрелами (от–до)
+		Profiles = {
+			Fast = { run = 21, bike = 42, accuracy = 0.85, shotGap = { 0.7, 1.0 } },
+			Medium = { run = 19, bike = 38, accuracy = 0.7, shotGap = { 0.9, 1.4 } },
+			Slow = { run = 17, bike = 34, accuracy = 0.55, shotGap = { 1.1, 1.8 } },
+		},
+		-- стандартные анимации R15
+		Animations = {
+			Idle = "rbxassetid://507766666",
+			Run = "rbxassetid://507767714",
+			Jump = "rbxassetid://507765000",
+			Fall = "rbxassetid://507767968",
+		},
+		SkinTones = {
+			Color3.fromRGB(255, 204, 153),
+			Color3.fromRGB(234, 184, 146),
+			Color3.fromRGB(204, 142, 105),
+			Color3.fromRGB(160, 95, 53),
+			Color3.fromRGB(105, 64, 40),
+		},
+		ShirtColors = {
+			Color3.fromRGB(235, 60, 60),
+			Color3.fromRGB(40, 140, 255),
+			Color3.fromRGB(60, 200, 90),
+			Color3.fromRGB(255, 170, 30),
+			Color3.fromRGB(170, 80, 230),
+			Color3.fromRGB(255, 95, 180),
+		},
+		PantsColors = {
+			Color3.fromRGB(40, 45, 70),
+			Color3.fromRGB(30, 30, 35),
+			Color3.fromRGB(90, 70, 50),
+			Color3.fromRGB(60, 80, 120),
+		},
+	},
+
 	-- Камера сама держится за спиной вдоль дороги (на велокруге — по оси куска BikeRoad,
 	-- вне дороги — по направлению бега). Повернул камеру сам — авто ждёт ResumeAfter и плавно возвращается.
 	FollowCamera = {
@@ -400,6 +453,7 @@ local Config = {
 		ToFinishDistance = 10, -- стад до финишной линии
 		ToFinishSpacing = 4, -- стад между игроками по ширине
 		ToBikeKey = Enum.KeyCode.B, -- засчитать первую стрельбу и перенести в зону посадки на велосипед
+		SpawnBotKey = Enum.KeyCode.N, -- выпустить тестового бота со старта (проходит всю трассу)
 	},
 
 	-- Велопетля (фаза 2): трамплины, ускорители, возврат на дорогу

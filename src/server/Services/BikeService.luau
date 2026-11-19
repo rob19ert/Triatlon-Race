@@ -75,7 +75,7 @@ local function detachBike(character: Model?)
 end
 
 -- Велосипед под персонажем: Root шаблона — у земли, поэтому опускаем на высоту бёдер + половину корня.
-local function attachBike(player: Player, character: Model)
+local function attachModel(character: Model, skinId: string)
 	if not template or character:FindFirstChild(C.ModelName) then
 		return
 	end
@@ -84,7 +84,7 @@ local function attachBike(player: Player, character: Model)
 	if not root or not humanoid then
 		return
 	end
-	local source = showroom:FindFirstChild(BikeSkins.effective(player)) or showroom:FindFirstChild(BikeSkins.Default)
+	local source = showroom:FindFirstChild(skinId) or showroom:FindFirstChild(BikeSkins.Default)
 	if not source or not source:IsA("Model") then
 		return
 	end
@@ -99,6 +99,10 @@ local function attachBike(player: Player, character: Model)
 	weld.C0 = offset
 	weld.Parent = bikeRoot
 	bike.Parent = character
+end
+
+local function attachBike(player: Player, character: Model)
+	attachModel(character, BikeSkins.effective(player))
 end
 
 local function setRiding(player: Player, on: boolean, reason: string)
@@ -204,6 +208,15 @@ local function step()
 			setRiding(player, true, "mount zone")
 		end
 	end
+end
+
+-- Для ботов (BotService): посадить модель NPC на велосипед / снять.
+function BikeService.attachToModel(character: Model, skinId: string)
+	attachModel(character, skinId)
+end
+
+function BikeService.detachFromModel(character: Model)
+	detachBike(character)
 end
 
 function BikeService.isRiding(player: Player): boolean
