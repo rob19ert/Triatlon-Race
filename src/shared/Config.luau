@@ -459,6 +459,19 @@ local Config = {
 		Bonk = { id = 3765689841, volume = 0.8 }, -- сбил маятник
 	},
 
+	-- Фоновая музыка (MusicClient, у каждого игрока своя): трек по состоянию гонки, плавная смена.
+	-- Треки — APM Music из Creator Store (бесплатные для игр Roblox).
+	Music = {
+		Volume = 0.3,
+		FadeTime = 1.5, -- с, затухание/нарастание при смене трека
+		Tracks = {
+			Lobby = { id = 1839846416, looped = true }, -- Tumble Tots (лобби и отсчёт)
+			Race = { id = 1842334530, looped = true }, -- Good Times Rolling (гонка, по кругу)
+			Results = { id = 1835278359, looped = false }, -- On With The Show 30C (подиум и итоги)
+		},
+		ByState = { Lobby = "Lobby", Countdown = "Lobby", Racing = "Race", Results = "Results" },
+	},
+
 	-- Частицы (клиент): числа ограничены ради телефонов
 	Effects = {
 		ConfettiCount = 40, -- попадание в мишень
