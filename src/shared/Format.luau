@@ -11,7 +11,7 @@ function Format.penalty(seconds: number?, compact: boolean?): string
 	end
 	local sign = if s > 0 then "+" else "−"
 	local n = math.abs(s)
-	return if compact then string.format("%s%d", sign, n) else string.format("%s%d с", sign, n)
+	return if compact then string.format("%s%d", sign, n) else string.format("%s%d s", sign, n)
 end
 
 return Format

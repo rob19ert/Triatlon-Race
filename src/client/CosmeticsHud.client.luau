@@ -78,7 +78,7 @@ local function button(parent: Instance, name: string, text: string, color: Color
 end
 
 -- Open button in the lobby
-local open = button(gui, "OpenShop", "🚲 Веломагазин", GOLD)
+local open = button(gui, "OpenShop", "🚲 Bike Shop", GOLD)
 open.Position = UDim2.fromOffset(12, 60)
 open.Size = UDim2.fromOffset(170, 46)
 -- на телефоне кнопка входа — меньше
@@ -119,7 +119,7 @@ header.Size = UDim2.new(1, 0, 0, 52)
 header.Parent = panel
 
 local title = label(header, "Title", Enum.Font.GothamBlack, 26, WHITE)
-title.Text = "🚲 ВЕЛОМАГАЗИН"
+title.Text = "🚲 BIKE SHOP"
 title.Position = UDim2.fromOffset(18, 10)
 title.Size = UDim2.new(0.45, -18, 0, 34)
 
@@ -348,7 +348,7 @@ refresh = function()
 
 	-- Header level and XP
 	local xp = player:GetAttribute(Attributes.ProfileXP)
-	levelText.Text = if loaded then string.format("Ур. %d", level :: number) else "Ур. —"
+	levelText.Text = if loaded then string.format("Lv. %d", level :: number) else "Lv. —"
 	local perLevel = AllConfig.Profile.XPPerLevel
 	local progress = if typeof(xp) == "number" then (xp % perLevel) / perLevel else 0
 	barFill.Size = UDim2.fromScale(progress, 1)
@@ -371,7 +371,7 @@ refresh = function()
 			tile.badge.Size = UDim2.fromOffset(big(78), big(24))
 		elseif not isUnlocked then
 			tile.badge.Visible = true
-			tile.badge.Text = string.format("🔒 Ур. %d", skin.level)
+			tile.badge.Text = string.format("🔒 Lv. %d", skin.level)
 			tile.badge.BackgroundColor3 = rgb(225, 230, 240)
 			tile.badge.Size = UDim2.fromOffset(big(78), big(24))
 		else
@@ -389,15 +389,15 @@ refresh = function()
 	local isUnlocked = loaded and unlocked(skin)
 	local canAct = true
 	if not loaded then
-		action.Text, action.BackgroundColor3, canAct = "Профиль недоступен", rgb(80, 92, 120), false
+		action.Text, action.BackgroundColor3, canAct = "Profile unavailable", rgb(80, 92, 120), false
 	elseif selected == skin.id then
-		action.Text, action.BackgroundColor3, canAct = "✓ ВЫБРАНО", MINT, false
+		action.Text, action.BackgroundColor3, canAct = "✓ SELECTED", MINT, false
 	elseif isUnlocked then
-		action.Text, action.BackgroundColor3 = "ВЫБРАТЬ", GOLD
+		action.Text, action.BackgroundColor3 = "SELECT", GOLD
 	elseif skin.productId > 0 then
-		action.Text, action.BackgroundColor3 = "КУПИТЬ · " .. priceText(skin), rgb(110, 225, 130)
+		action.Text, action.BackgroundColor3 = "BUY · " .. priceText(skin), rgb(110, 225, 130)
 	else
-		action.Text, action.BackgroundColor3, canAct = string.format("🔒 Уровень %d", skin.level), rgb(80, 92, 120), false
+		action.Text, action.BackgroundColor3, canAct = string.format("🔒 Level %d", skin.level), rgb(80, 92, 120), false
 	end
 	action.TextColor3 = if canAct or selected == skin.id then INK else MUTED
 	action.AutoButtonColor = canAct

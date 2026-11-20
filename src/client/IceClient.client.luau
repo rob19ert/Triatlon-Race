@@ -64,7 +64,7 @@ end)
 
 local button = TouchButtons.create({
 	name = "IceClick",
-	title = "Жми!",
+	title = "Press!",
 	slot = 3,
 	color = Color3.fromRGB(90, 190, 255),
 	onDown = click,

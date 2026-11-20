@@ -5,20 +5,20 @@ local Config = {
 	Cosmetics = {
 		SelectionCooldown = 1,
 		BikeSkins = {
-			{ id = "auto", title = "Бабл-круизер", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Пузыри в корзинке, ветер в волосах." },
-			{ id = "ice", title = "Орбита", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Говорят, однажды доехал до Луны и обратно." },
-			{ id = "ember", title = "Огненный дракон", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 3733029662, robuxOnly = true, rarity = "Rare", blurb = "Колёса горячие. Не трогать руками!" },
-			{ id = "lime", title = "Лесной странник", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 3733029484, robuxOnly = true, rarity = "Rare", blurb = "Пахнет хвоей и немного — победой." },
-			{ id = "violet", title = "Неоновая стрела", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 3733028459, robuxOnly = true, rarity = "Epic", blurb = "Светится даже днём. Особенно днём." },
-			{ id = "gold", title = "Паровой экспресс", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 3733029726, robuxOnly = true, rarity = "Legendary", blurb = "Чух-чух! Пар в комплект не входит." },
+			{ id = "auto", title = "Bubble Cruiser", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Bubbles in the basket, wind in your hair." },
+			{ id = "ice", title = "Orbit", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Rumor has it, it rode to the Moon and back." },
+			{ id = "ember", title = "Fire Dragon", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 3733029662, robuxOnly = true, rarity = "Rare", blurb = "Hot wheels. Do not touch!" },
+			{ id = "lime", title = "Forest Ranger", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 3733029484, robuxOnly = true, rarity = "Rare", blurb = "Smells like pine needles. And a bit like victory." },
+			{ id = "violet", title = "Neon Arrow", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 3733028459, robuxOnly = true, rarity = "Epic", blurb = "Glows even in daylight. Especially in daylight." },
+			{ id = "gold", title = "Steam Express", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 3733029726, robuxOnly = true, rarity = "Legendary", blurb = "Choo-choo! Steam not included." },
 		},
 		-- robuxOnly: открывается только покупкой (Developer Product), уровень не открывает
 		-- Редкость — только внешний вид, на езду не влияет
 		Rarities = {
-			Common = { title = "Обычный", stars = 1, color = Color3.fromRGB(150, 170, 195) },
-			Rare = { title = "Редкий", stars = 2, color = Color3.fromRGB(70, 160, 255) },
-			Epic = { title = "Эпический", stars = 3, color = Color3.fromRGB(180, 100, 255) },
-			Legendary = { title = "Легендарный", stars = 4, color = Color3.fromRGB(255, 185, 40) },
+			Common = { title = "Common", stars = 1, color = Color3.fromRGB(150, 170, 195) },
+			Rare = { title = "Rare", stars = 2, color = Color3.fromRGB(70, 160, 255) },
+			Epic = { title = "Epic", stars = 3, color = Color3.fromRGB(180, 100, 255) },
+			Legendary = { title = "Legendary", stars = 4, color = Color3.fromRGB(255, 185, 40) },
 		},
 		Showroom = {
 			SpinSpeed = 0.6, -- рад/с, автоповорот велосипеда на подиуме
@@ -253,7 +253,7 @@ local Config = {
 		PushStartDelay = 0, -- с после старта, когда боты ещё не толкаются (0 — толкаются сразу, с решётки)
 		MinProgress = 0.5, -- стад: меньше за StuckJumpAfter — «не продвигается»
 		AimTime = 1.2, -- с, перед первым выстрелом
-		MissPopup = "+3 с",
+		MissPopup = "+3 s",
 		-- сила: скорость бега и езды, точность (доля попаданий), пауза между выстрелами (от–до),
 		-- dodge — шанс «проскочить» маятник/мельницу/поезд без падения (боты не смотрят на тайминг)
 		Profiles = {
@@ -329,14 +329,14 @@ local Config = {
 		Defs = {
 			Fog = {
 				icon = "🌫",
-				title = "Туман",
-				desc = "Видно на пару шагов",
+				title = "Fog",
+				desc = "You can barely see a thing",
 				atmosphere = { density = 0.82, offset = 0.1, haze = 6, glare = 0, color = Color3.fromRGB(205, 210, 216), decay = Color3.fromRGB(185, 190, 198) },
 			},
 			Night = {
 				icon = "🌙",
-				title = "Ночь",
-				desc = "Темно, у всех фары",
+				title = "Night",
+				desc = "Dark! Everyone gets headlights",
 				lighting = {
 					clockTime = 0.5,
 					brightness = 1,
@@ -348,8 +348,8 @@ local Config = {
 			},
 			LowGravity = {
 				icon = "🎈",
-				title = "Низкая гравитация",
-				desc = "Прыжки до небес",
+				title = "Low Gravity",
+				desc = "Jump to the sky",
 				gravity = 80, -- обычная 196.2; полёты с трамплинов и толчков дольше
 				jumpMultiplier = 2, -- высоту прыжка (в стадах) движок держит при любой гравитации — поднимаем сами
 			},
@@ -385,7 +385,7 @@ local Config = {
 		GripDecayPerSec = 0.6, -- уходит само: от ~4 кликов/с сцепление растёт, без кликов — ноль меньше чем за секунду
 		MaxClicksPerSec = 10, -- чаще не засчитываем (автокликер не помогает)
 		SlideStrength = 0.6, -- снос наружу при нулевом сцеплении (доля к направлению движения)
-		Hint = "ЖМИ!",
+		Hint = "PRESS!",
 	},
 
 	Boxes = {
@@ -400,11 +400,11 @@ local Config = {
 		-- шанс подвоха (kind = "bad") по месту в гонке: лидеру чаще, последнему редко; одному в гонке — Solo
 		BadChance = { Leader = 0.4, Last = 0.05, Solo = 0.2 },
 		Defs = {
-			Turbo = { icon = "⚡", title = "Турбо", hint = "быстрее 5 с", seconds = 5 }, -- то же турбо, что за 5/5 (Config.Reward)
+			Turbo = { icon = "⚡", title = "Turbo", hint = "faster for 5 s", seconds = 5 }, -- то же турбо, что за 5/5 (Config.Reward)
 			MegaPush = {
 				icon = "💥",
-				title = "Мега-толчок",
-				hint = "толкни соперника (F)",
+				title = "Mega Push",
+				hint = "push a rival (F)",
 				seconds = 5,
 				rivalRadius = 80, -- стад: выдаём, только если соперник ближе (иначе толкать некого)
 				force = 1.5, -- отлёт соперника ×
@@ -413,22 +413,22 @@ local Config = {
 			},
 			BigTargets = {
 				icon = "🎯",
-				title = "Большие мишени",
-				hint = "на следующей стрельбе",
+				title = "Big Targets",
+				hint = "on your next shooting",
 				scale = 1.6, -- диаметр мишени × на следующую стрельбу
 				maxDiameter = 1.33, -- но не больше (мишени стоят через 1,4 стад — не слипаться)
 				pendulumSpeed = 1.3, -- маятник мушки быстрее
 			},
-			Shield = { icon = "🛡", title = "Щит", hint = "погасит один удар", seconds = 30 }, -- гасит одно попадание (маятник, поезд, толчок…); пропадает через seconds
-			Ghost = { icon = "👻", title = "Призрак", hint = "сквозь препятствия 4 с", seconds = 4, transparency = 0.65 }, -- сквозь препятствия и толчки
-			SecondWind = { icon = "💚", title = "Второе дыхание", hint = "пульс вниз", pulse = 30, uselessBelow = 45 }, -- пульс сразу до pulse; ниже uselessBelow — не выдаём
-			TimeBonus = { icon = "⏱", title = "−2 секунды", hint = "к итоговому времени", seconds = 2 }, -- к итоговому времени
+			Shield = { icon = "🛡", title = "Shield", hint = "blocks one hit", seconds = 30 }, -- гасит одно попадание (маятник, поезд, толчок…); пропадает через seconds
+			Ghost = { icon = "👻", title = "Ghost", hint = "walk through obstacles for 4 s", seconds = 4, transparency = 0.65 }, -- сквозь препятствия и толчки
+			SecondWind = { icon = "💚", title = "Second Wind", hint = "heart rate down", pulse = 30, uselessBelow = 45 }, -- пульс сразу до pulse; ниже uselessBelow — не выдаём
+			TimeBonus = { icon = "⏱", title = "−2 seconds", hint = "off your final time", seconds = 2 }, -- к итоговому времени
 			-- подвохи (щит или призрак их гасят)
-			Snail = { icon = "🐌", title = "Улитка", hint = "медленнее 3 с", kind = "bad", seconds = 3, speed = 0.5 },
-			Invert = { icon = "🔄", title = "Наоборот", hint = "лево и право перепутаны 6 с", kind = "bad", seconds = 6 },
+			Snail = { icon = "🐌", title = "Snail", hint = "slower for 3 s", kind = "bad", seconds = 3, speed = 0.5 },
+			Invert = { icon = "🔄", title = "Reverse", hint = "left and right swapped for 6 s", kind = "bad", seconds = 6 },
 			-- разное
-			Spring = { icon = "🦘", title = "Пружина", hint = "3 прыжка выше", jumps = 3, multiplier = 2.2, seconds = 20 }, -- JumpHeight ×; неистраченные прыжки сгорают через seconds
-			Roulette = { icon = "🎲", title = "Рулетка", hint = "что выпадет?", kind = "any" }, -- случайный бонус: подвох или польза 50/50
+			Spring = { icon = "🦘", title = "Spring", hint = "3 super jumps", jumps = 3, multiplier = 2.2, seconds = 20 }, -- JumpHeight ×; неистраченные прыжки сгорают через seconds
+			Roulette = { icon = "🎲", title = "Roulette", hint = "what will you get?", kind = "any" }, -- случайный бонус: подвох или польза 50/50
 		},
 	},
 
@@ -505,7 +505,7 @@ local Config = {
 		MountTag = "BikeMount", -- зона посадки в велопарке (север)
 		DismountTag = "BikeDismount", -- зона высадки (юг)
 		GateTag = "BikeGate", -- невидимые ворота круга (атрибут Order 1..N, LookVector = по ходу); Order 0 — начало круга
-		SkipNotice = "Сначала проедь круг!", -- въехал в высадку, не пройдя все ворота
+		SkipNotice = "Ride the full loop first!", -- въехал в высадку, не пройдя все ворота
 		RideSpeed = 36, -- стад/с, обычная езда (пульс держится ~RunPulse)
 		PedalSpeed = 46, -- стад/с, педали (кнопка спринта; пульс +SprintGainPerSec)
 		CoastRecoveryPerSec = 5, -- спуск без педалей: пульс −5/с

@@ -61,7 +61,7 @@ panel.Parent = gui
 local scale = Instance.new("UIScale")
 scale.Parent = panel
 
-local heading = label(panel, "Голосуй: модификатор заезда", Enum.Font.GothamBlack, 22, 0, 32)
+local heading = label(panel, "Vote: race modifier", Enum.Font.GothamBlack, 22, 0, 32)
 heading.TextStrokeTransparency = 0.4
 
 type Card = { button: TextButton, icon: TextLabel, title: TextLabel, desc: TextLabel, votes: TextLabel, stroke: UIStroke }
@@ -201,8 +201,9 @@ pad.PaddingLeft = UDim.new(0, 12)
 pad.PaddingRight = UDim.new(0, 12)
 pad.Parent = badge
 
--- string.upper не трогает кириллицу
+-- string.upper не трогает кириллицу — поднимаем и её (на случай русских названий)
 local function utf8upper(s: string): string
+	s = string.upper(s)
 	local out = {}
 	for _, code in utf8.codes(s) do
 		if code >= 0x430 and code <= 0x44F then

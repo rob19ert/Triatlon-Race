@@ -16,7 +16,7 @@ local Attributes = require(Shared:WaitForChild("Attributes"))
 local TouchButtons = require(script.Parent:WaitForChild("TouchButtons"))
 
 local ACTION = "Push"
-local TITLE = "Толчок"
+local TITLE = "Push"
 
 local player = Players.LocalPlayer
 local pushRemote = Remotes.get(Remotes.Names.PushIntent)

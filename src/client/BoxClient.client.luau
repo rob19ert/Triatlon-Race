@@ -118,10 +118,10 @@ Remotes.get(Remotes.Names.BoxTaken).OnClientEvent:Connect(function(position: Vec
 	end
 	local shown = rolled or effect
 	local text = if blocked
-		then string.format("%s %s — щит погасил!", (D :: any)[shown].icon, (D :: any)[shown].title)
+		then string.format("%s %s — blocked by your shield!", (D :: any)[shown].icon, (D :: any)[shown].title)
 		else describe(shown)
 	if rolled then
-		text = D.Roulette.icon .. " Рулетка → " .. text
+		text = D.Roulette.icon .. " Roulette → " .. text
 	end
 	toast.Text = text
 	toastUntil = os.clock() + TOAST_SECONDS
@@ -204,35 +204,35 @@ RunService.Heartbeat:Connect(function()
 	local megaLeft = left(player, Attributes.MegaPushUntil)
 	mega.Visible = megaLeft > 0
 	if megaLeft > 0 then
-		mega.Text = string.format("%s МЕГА-ТОЛЧОК %.1f", D.MegaPush.icon, megaLeft)
+		mega.Text = string.format("%s MEGA PUSH %.1f", D.MegaPush.icon, megaLeft)
 	end
 	local ghostLeft = left(player, Attributes.GhostUntil)
 	ghostPill.Visible = ghostLeft > 0
 	if ghostLeft > 0 then
-		ghostPill.Text = string.format("%s ПРИЗРАК %.1f", D.Ghost.icon, ghostLeft)
+		ghostPill.Text = string.format("%s GHOST %.1f", D.Ghost.icon, ghostLeft)
 	end
 	shieldPill.Visible = left(player, Attributes.ShieldUntil) > 0
 	if shieldPill.Visible then
-		shieldPill.Text = D.Shield.icon .. " Щит"
+		shieldPill.Text = D.Shield.icon .. " Shield"
 	end
 	local jumps = player:GetAttribute(Attributes.SpringJumps)
 	springPill.Visible = typeof(jumps) == "number" and jumps > 0
 	if springPill.Visible then
-		springPill.Text = string.format("%s Пружина ×%d", D.Spring.icon, jumps :: number)
+		springPill.Text = string.format("%s Spring ×%d", D.Spring.icon, jumps :: number)
 	end
 	local snailLeft = left(player, Attributes.SnailUntil)
 	snailPill.Visible = snailLeft > 0
 	if snailLeft > 0 then
-		snailPill.Text = string.format("%s УЛИТКА %.1f", D.Snail.icon, snailLeft)
+		snailPill.Text = string.format("%s SNAIL %.1f", D.Snail.icon, snailLeft)
 	end
 	local invertLeft = left(player, Attributes.InvertUntil)
 	invertPill.Visible = invertLeft > 0
 	if invertLeft > 0 then
-		invertPill.Text = string.format("%s НАОБОРОТ %.1f", D.Invert.icon, invertLeft)
+		invertPill.Text = string.format("%s REVERSE %.1f", D.Invert.icon, invertLeft)
 	end
 	big.Visible = player:GetAttribute(Attributes.BigTargets) == true
 	if big.Visible then
-		big.Text = D.BigTargets.icon .. " Большие мишени"
+		big.Text = D.BigTargets.icon .. " Big Targets"
 	end
 
 	-- щит и призрак у всех игроков

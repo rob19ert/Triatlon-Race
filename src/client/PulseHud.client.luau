@@ -80,7 +80,7 @@ warning.Font = Enum.Font.GothamBlack
 warning.TextSize = 18
 warning.TextColor3 = Color3.fromRGB(255, 70, 70)
 warning.TextStrokeTransparency = 0.4
-warning.Text = "КРАСНАЯ ЗОНА — отдышись!"
+warning.Text = "RED ZONE — catch your breath!"
 warning.Visible = false
 warning.Parent = panel
 

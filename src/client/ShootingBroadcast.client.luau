@@ -49,10 +49,10 @@ local shooters: { [number]: Shooter } = {} -- по userId
 local function rangeTitle(order: number): string
 	for _, model in CollectionService:GetTagged(Config.Shooting.RangeTag) do
 		if model:GetAttribute("Order") == order then
-			return if model:GetAttribute("Stance") == "Standing" then "🎯 СТРЕЛЬБА СТОЯ" else "🎯 СТРЕЛЬБА ЛЁЖА"
+			return if model:GetAttribute("Stance") == "Standing" then "🎯 STANDING SHOOT" else "🎯 PRONE SHOOT"
 		end
 	end
-	return "🎯 СТРЕЛЬБА " .. order
+	return "🎯 SHOOTING " .. order
 end
 
 local thumbs: { [number]: string } = {}

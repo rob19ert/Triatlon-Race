@@ -50,9 +50,9 @@ local function phaseText(entry: Types.StandingEntry): (string, Color3)
 	if entry.phase == "Finished" then
 		return formatTime(entry.time or 0), GOLD
 	elseif entry.phase == "Shooting" then
-		return "🎯 стрельба", ACCENT
+		return "🎯 shooting", ACCENT
 	end
-	return "🏃 трасса", DIM
+	return "🏃 on track", DIM
 end
 
 local function showEvent(text: string, color: Color3)
@@ -187,7 +187,7 @@ local function renderBoard(board: Board)
 	end
 
 	if s == "Racing" then
-		board.title.Text = "🏁 LIVE • ГОНКА"
+		board.title.Text = "🏁 LIVE • RACE"
 		board.timer.Text = formatTime(workspace:GetServerTimeNow() - current.raceStartedAt)
 		for i, entry in standings do
 			local row = board.rows[i]
@@ -197,12 +197,12 @@ local function renderBoard(board: Board)
 			local status, color = phaseText(entry)
 			-- штраф показываем, пока бежит; у финишировавшего время уже итоговое (со штрафом)
 			if entry.penalty ~= 0 and entry.phase ~= "Finished" then
-				status ..= "  " .. Format.penalty(entry.penalty, true) .. "с"
+				status ..= "  " .. Format.penalty(entry.penalty, true) .. "s"
 			end
 			setRow(row, tostring(entry.place), entry.name, status, color, entry.place == 1)
 		end
 	elseif s == "Results" then
-		board.title.Text = "🏆 ИТОГИ"
+		board.title.Text = "🏆 RESULTS"
 		board.timer.Text = ""
 		for i, entry in results do
 			local row = board.rows[i]
@@ -218,14 +218,14 @@ local function renderBoard(board: Board)
 			end
 		end
 	else
-		board.title.Text = if s == "Countdown" then "СТАРТ!" else "СЛЕДУЮЩАЯ ГОНКА"
+		board.title.Text = if s == "Countdown" then "GET READY!" else "NEXT RACE"
 		board.timer.Text = if current.endsAt > 0 then string.format("%d", math.ceil(remaining())) else "…"
 		for i, p in Players:GetPlayers() do
 			local row = board.rows[i]
 			if not row then
 				break
 			end
-			setRow(row, "•", p.DisplayName, "на старте", DIM, false)
+			setRow(row, "•", p.DisplayName, "on the grid", DIM, false)
 		end
 	end
 
@@ -243,7 +243,7 @@ end
 
 Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: Types.RaceStatePayload)
 	if payload.state == "Racing" and current.state ~= "Racing" then
-		showEvent("🔫 СТАРТ ДАН!", GOLD)
+		showEvent("🔫 AND THEY'RE OFF!", GOLD)
 	end
 	current = payload
 	if payload.state ~= "Racing" then
@@ -257,16 +257,16 @@ end)
 
 Remotes.get(Remotes.Names.PlayerFinished).OnClientEvent:Connect(function(entry: Types.ResultEntry)
 	if entry.photoFinish then
-		showEvent("📸 ФОТОФИНИШ!", PHOTO)
+		showEvent("📸 PHOTO FINISH!", PHOTO)
 	else
-		showEvent(string.format("🏁 %s — %d место • %s", entry.name, entry.place or 0, formatTime(entry.time or 0)), GOLD)
+		showEvent(string.format("🏁 %s — #%d • %s", entry.name, entry.place or 0, formatTime(entry.time or 0)), GOLD)
 	end
 end)
 
 -- чистая стрельба — на табло
 Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summary: Types.ShootingSummary)
 	if summary.hits == summary.shots then
-		showEvent(string.format("🎯 %s — ЧИСТО %d/%d!", summary.name, summary.hits, summary.shots), GOLD)
+		showEvent(string.format("🎯 %s — CLEAN %d/%d!", summary.name, summary.hits, summary.shots), GOLD)
 	end
 end)
 
@@ -274,7 +274,7 @@ Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(list: { Ty
 	results = list
 	local winner = list[1]
 	if winner and not winner.dnf then
-		showEvent("🏆 ПОБЕДИТЕЛЬ: " .. winner.name, GOLD)
+		showEvent("🏆 WINNER: " .. winner.name, GOLD)
 	end
 end)
 

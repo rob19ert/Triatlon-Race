@@ -93,6 +93,6 @@ RunService.RenderStepped:Connect(function()
 	local left = turboLeft(player)
 	gui.Enabled = left > 0
 	if left > 0 then
-		label.Text = string.format("🔥 ТУРБО %.1f", left)
+		label.Text = string.format("🔥 TURBO %.1f", left)
 	end
 end)

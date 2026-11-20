@@ -70,7 +70,7 @@ local function publish(player: Player, profile: Profile)
 	player:SetAttribute(Attributes.ProfileBest, profile.best)
 	player:SetAttribute(Attributes.ProfileXP, profile.xp)
 	player:SetAttribute(Attributes.ProfileLevel, math.floor(profile.xp / C.XPPerLevel) + 1)
-	player:SetAttribute(Attributes.ProfileAchievement, if profile.veteran then "Ветеран трассы" elseif profile.firstFinish then "Первый финиш" else nil)
+	player:SetAttribute(Attributes.ProfileAchievement, if profile.veteran then "Track Veteran" elseif profile.firstFinish then "First Finish" else nil)
 	player:SetAttribute(Attributes.ProfileFinishes, profile.finishes)
 	player:SetAttribute(Attributes.ProfileLoadFailed, nil)
 end

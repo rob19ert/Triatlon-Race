@@ -34,7 +34,7 @@ local function popup(target: Player, added: number) -- added < 0 — бонус 
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
-	label.Text = if added > 0 then string.format("+%d с", added) else string.format("−%d с", -added)
+	label.Text = if added > 0 then string.format("+%d s", added) else string.format("−%d s", -added)
 	label.TextColor3 = if added > 0 then Color3.fromRGB(255, 70, 70) else Color3.fromRGB(70, 220, 90)
 	label.TextStrokeColor3 = Color3.new(1, 1, 1)
 	label.TextStrokeTransparency = 0

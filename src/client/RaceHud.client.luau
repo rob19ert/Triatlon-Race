@@ -143,12 +143,12 @@ local function renderProfile()
 	local best = player:GetAttribute(Attributes.ProfileBest)
 	local achievement = player:GetAttribute(Attributes.ProfileAchievement)
 	if typeof(finishes) ~= "number" or typeof(xp) ~= "number" or typeof(level) ~= "number" then
-		profileCard.Text = if player:GetAttribute(Attributes.ProfileLoadFailed) then "Профиль пока недоступен" else "Загрузка профиля…"
+		profileCard.Text = if player:GetAttribute(Attributes.ProfileLoadFailed) then "Profile unavailable" else "Loading profile…"
 		return
 	end
 	local xpPerLevel = Config.Profile.XPPerLevel
 	local record = if typeof(best) == "number" then formatTime(best) else "—"
-	local text = string.format("Уровень %d  •  %d / %d XP\nФиниши: %d  •  Рекорд: %s", level, xp % xpPerLevel, xpPerLevel, finishes, record)
+	local text = string.format("Level %d  •  %d / %d XP\nFinishes: %d  •  Best: %s", level, xp % xpPerLevel, xpPerLevel, finishes, record)
 	if typeof(achievement) == "string" then
 		text ..= "\n" .. achievement
 	end
@@ -185,27 +185,27 @@ local function render()
 	textLimit.MaxTextSize = if racing then H.TimerTextSize else bigHeight
 	if s == "Lobby" then
 		if current.endsAt > 0 then
-			status.Text = string.format("Старт через %d", math.ceil(remaining()))
+			status.Text = string.format("Starting in %d", math.ceil(remaining()))
 		else
-			status.Text = "Ожидание игроков…"
+			status.Text = "Waiting for players…"
 		end
 	elseif s == "Countdown" then
 		status.Text = tostring(math.max(1, math.ceil(remaining())))
 	elseif s == "Racing" then
 		if myTime then
-			status.Text = "Финиш! " .. formatTime(myTime)
+			status.Text = "Finished! " .. formatTime(myTime)
 		else
 			-- во время гонки: чистое время и штраф отдельно («0:42  +15 с штраф»);
 			-- итог на финише = чистое + штраф (его считает сервер)
 			local penalty = player:GetAttribute(Attributes.PenaltyTime)
 			local p = if typeof(penalty) == "number" then penalty else 0
 			local clean = workspace:GetServerTimeNow() - current.raceStartedAt
-			status.Text = if p > 0 then string.format("%s  %s штраф", formatTime(clean), Format.penalty(p))
-				elseif p < 0 then string.format("%s  %s бонус", formatTime(clean), Format.penalty(p))
+			status.Text = if p > 0 then string.format("%s  %s penalty", formatTime(clean), Format.penalty(p))
+				elseif p < 0 then string.format("%s  %s bonus", formatTime(clean), Format.penalty(p))
 				else formatTime(clean)
 		end
 	elseif s == "Results" then
-		status.Text = string.format("Результаты • лобби через %d", math.ceil(remaining()))
+		status.Text = string.format("Results • lobby in %d", math.ceil(remaining()))
 	end
 end
 
@@ -227,7 +227,7 @@ end)
 
 -- Таблица появляется после показа подиума (камеру на подиум включает PodiumCamera).
 Remotes.get(Remotes.Names.RaceResults).OnClientEvent:Connect(function(results: { Types.ResultEntry })
-	local lines = { "РЕЗУЛЬТАТЫ", "" }
+	local lines = { "RESULTS", "" }
 	for _, entry in results do
 		local accuracy = if entry.shots and entry.shots > 0 then string.format("   🎯 %d/%d", entry.hits or 0, entry.shots) else ""
 		if entry.dnf then
@@ -252,7 +252,7 @@ Remotes.get(Remotes.Names.ShootingFinished).OnClientEvent:Connect(function(summa
 	local misses = summary.shots - summary.hits
 	showFeed(if misses == 0
 		then string.format("%s — %d/%d", summary.name, summary.hits, summary.shots)
-		else string.format("%s — %d/%d, штрафных: %d", summary.name, summary.hits, summary.shots, misses))
+		else string.format("%s — %d/%d, misses: %d", summary.name, summary.hits, summary.shots, misses))
 end)
 
 Remotes.get(Remotes.Names.Notice).OnClientEvent:Connect(function(text: string)

@@ -127,7 +127,7 @@ local function applyPush(pusher: any, root: BasePart, target: any, targetRoot: B
 	if isPlayer and Protection.absorb(target) then
 		pushFxRemote:FireAllClients(idOf(pusher), 0)
 		if typeof(pusher) == "Instance" then
-			noticeRemote:FireClient(pusher, string.format("%s закрылся щитом!", nameOf(target)))
+			noticeRemote:FireClient(pusher, string.format("%s blocked it with a shield!", nameOf(target)))
 		end
 		return false
 	end
@@ -135,7 +135,7 @@ local function applyPush(pusher: any, root: BasePart, target: any, targetRoot: B
 	Knockback.apply(targetRoot, away, C.Speed * (if mega then mega.force else 1), C.UpSpeed * (if mega then mega.up else 1), C.Duration)
 	if isPlayer then
 		knockedRemote:FireClient(target, C.KnockdownTime)
-		noticeRemote:FireClient(target, string.format("%s толкнул тебя!", nameOf(pusher)))
+		noticeRemote:FireClient(target, string.format("%s pushed you!", nameOf(pusher)))
 	else
 		BotService.knockDown(target, C.KnockdownTime)
 	end

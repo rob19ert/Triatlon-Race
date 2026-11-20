@@ -100,7 +100,7 @@ local function statusText(entry: Types.StandingEntry): string
 	if entry.phase == "Finished" then
 		return formatTime(entry.time or 0)
 	elseif entry.phase == "Shooting" then
-		return "стрельба"
+		return "shooting"
 	end
 	return ""
 end
@@ -110,7 +110,7 @@ local function fillRow(row: TextLabel, entry: Types.StandingEntry)
 	local status = statusText(entry)
 	-- у финишировавшего время уже итоговое (со штрафом) — штраф отдельно не пишем
 	local penalty = if entry.penalty ~= 0 and entry.phase ~= "Finished"
-		then string.format('  <font color="%s">%sс</font>', if entry.penalty > 0 then "#FF6464" else "#5ADC6E", Format.penalty(entry.penalty, true))
+		then string.format('  <font color="%s">%ss</font>', if entry.penalty > 0 then "#FF6464" else "#5ADC6E", Format.penalty(entry.penalty, true))
 		else ""
 	row.Text = string.format(
 		"<b>%d.</b> %s%s%s",

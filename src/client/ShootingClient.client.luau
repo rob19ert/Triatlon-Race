@@ -182,13 +182,13 @@ local function updateBreathLabel(t: number)
 	local holdUntil = numberAttr(Attributes.HoldBreathUntil, 0)
 	local readyAt = numberAttr(Attributes.HoldBreathReadyAt, 0)
 	if t < holdUntil then
-		breathLabel.Text = string.format("Дыхание задержано: %.1f с", holdUntil - t)
+		breathLabel.Text = string.format("Breath held: %.1f s", holdUntil - t)
 	elseif t < readyAt then
-		breathLabel.Text = string.format("Дыхание: снова через %.1f с", readyAt - t)
+		breathLabel.Text = string.format("Breath: ready in %.1f s", readyAt - t)
 	elseif TouchButtons.isTouch() then
-		breathLabel.Text = "«Огонь» — когда мушка на мишени • «Дыхание» — замедлить"
+		breathLabel.Text = "Tap “Fire” when the sight is on a target • “Breath” slows it down"
 	else
-		breathLabel.Text = "ЛКМ / Пробел — выстрел, когда мушка на мишени • ПКМ — задержать дыхание"
+		breathLabel.Text = "LMB / Space — fire when the sight is on a target • RMB — hold your breath"
 	end
 end
 
@@ -197,7 +197,7 @@ local function updateTouchButtons(state: AimState, t: number)
 	if fireButton then
 		local left = state.lastShotAt + C.MinShotInterval - t
 		fireButton:setCooldown(if left > 0 then left / C.MinShotInterval else 0)
-		fireButton:setTitle(if state.shotsLeft > 0 then string.format("Огонь\n%d", state.shotsLeft) else "—")
+		fireButton:setTitle(if state.shotsLeft > 0 then string.format("Fire\n%d", state.shotsLeft) else "—")
 	end
 	if breathButton then
 		local holdUntil = numberAttr(Attributes.HoldBreathUntil, 0)
@@ -210,7 +210,7 @@ local function updateTouchButtons(state: AimState, t: number)
 			breathButton:setTitle(string.format("%d", math.ceil(readyAt - t)))
 		else
 			breathButton:setCooldown(0)
-			breathButton:setTitle("Дыхание")
+			breathButton:setTitle("Breath")
 		end
 	end
 end
@@ -394,7 +394,7 @@ local function enterAim(payload: Types.ShootingStartPayload)
 	TouchButtons.setGroupHidden("run", true)
 	fireButton = TouchButtons.create({
 		name = "Fire",
-		title = "Огонь",
+		title = "Fire",
 		slot = 1,
 		big = true,
 		color = Color3.fromRGB(235, 70, 70),
@@ -404,7 +404,7 @@ local function enterAim(payload: Types.ShootingStartPayload)
 	})
 	breathButton = TouchButtons.create({
 		name = "Breath",
-		title = "Дыхание",
+		title = "Breath",
 		slot = 2,
 		color = Color3.fromRGB(70, 170, 255),
 		onDown = function()

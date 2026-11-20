@@ -34,7 +34,7 @@ ContextActionService:BindAction(ACTION, onAction, false, Enum.KeyCode.LeftShift,
 -- тач: держать кнопку
 TouchButtons.create({
 	name = "Sprint",
-	title = "Спринт",
+	title = "Sprint",
 	slot = 1,
 	group = "run",
 	color = Color3.fromRGB(70, 170, 255),

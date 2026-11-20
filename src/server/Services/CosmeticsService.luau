@@ -50,7 +50,7 @@ function CosmeticsService.start()
 					AnalyticsTracker.bikeSelected(player, id)
 				end
 				if not success and player.Parent == Players then
-					Remotes.get(Remotes.Names.Notice):FireClient(player, "Не удалось сохранить выбор велосипеда")
+					Remotes.get(Remotes.Names.Notice):FireClient(player, "Couldn't save your bike choice")
 				end
 				return
 			end

@@ -190,7 +190,7 @@ local function onPlayerFinished(player: Player, finishClock: number)
 	log("%s finished #%d in %.3fs (penalty %ds)%s", player.Name, entry.place :: number, elapsed, penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
-		noticeRemote:FireAllClients("📸 Фотофиниш!")
+		noticeRemote:FireAllClients("📸 Photo finish!")
 	end
 
 	if not winnerFinishClock then
@@ -218,7 +218,7 @@ local function onBotFinished(bot: any, finishClock: number)
 	log("%s (bot) finished #%d in %.3fs (penalty %ds)%s", bot.name, entry.place :: number, elapsed, bot.penalty, if photo then " (PHOTO FINISH)" else "")
 	playerFinishedRemote:FireAllClients(entry)
 	if photo then
-		noticeRemote:FireAllClients("📸 Фотофиниш!")
+		noticeRemote:FireAllClients("📸 Photo finish!")
 	end
 	if not winnerFinishClock then
 		winnerFinishClock = os.clock()

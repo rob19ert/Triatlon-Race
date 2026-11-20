@@ -130,17 +130,17 @@ end
 local function announce(hit: boolean, shotsFired: number, totalShots: number, golden: boolean?)
 	local last = shotsFired >= totalShots
 	if last and hits == totalShots then
-		showStreak(string.format("ЧИСТО %d/%d! 🔥 ТУРБО", hits, totalShots), GOLD, true)
+		showStreak(string.format("CLEAN %d/%d! 🔥 TURBO", hits, totalShots), GOLD, true)
 	elseif golden then
-		showStreak(string.format("⭐ ЗОЛОТО! −%d с", Config.Reward.GoldenBonusSeconds), GOLD, true)
+		showStreak(string.format("⭐ GOLD! −%d s", Config.Reward.GoldenBonusSeconds), GOLD, true)
 	elseif not hit then
-		showStreak(string.format("+%d с", Config.Penalty.SecondsPerMiss), RED, true) -- штраф за промах
+		showStreak(string.format("+%d s", Config.Penalty.SecondsPerMiss), RED, true) -- штраф за промах
 	elseif streak >= 4 then
-		showStreak(string.format("🔥🔥 %d подряд!", streak), ORANGE, true)
+		showStreak(string.format("🔥🔥 %d in a row!", streak), ORANGE, true)
 	elseif streak == 3 then
-		showStreak("🔥 3 подряд!", ORANGE, false)
+		showStreak("🔥 3 in a row!", ORANGE, false)
 	elseif streak == 2 then
-		showStreak("2 подряд!", GOLD, false)
+		showStreak("2 in a row!", GOLD, false)
 	end
 end
 
