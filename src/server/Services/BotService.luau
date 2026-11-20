@@ -499,20 +499,27 @@ local function stepBot(bot: Bot, now: number)
 	if inFallZone(pos) then
 		bot.falls += 1
 		local target = bot.spawnIndex
+		local nextIndex = target + 1
 		if bot.falls >= B.MaxFalls then
-			-- не мучаем: «доплыл» до следующей точки Spawn
+			-- не мучаем: «доплыл» до следующей точки Spawn — но не дальше ближайшего действия
+			-- (рубеж, посадка на велосипед…): его бот должен выполнить сам, иначе не сможет финишировать
 			for i = bot.spawnIndex + 1, #waypoints do
-				if waypoints[i].spawn then
+				if waypoints[i].action then
 					target = i
+					nextIndex = i -- придёт в эту точку и выполнит действие
+					break
+				elseif waypoints[i].spawn then
+					target = i
+					nextIndex = i + 1
+					bot.spawnIndex = i
 					break
 				end
 			end
-			bot.spawnIndex = target
 			bot.falls = 0
 		end
 		log("%s fell -> point %d", bot.name, target)
 		teleportTo(bot, target)
-		bot.index = target + 1
+		bot.index = nextIndex
 		return
 	end
 
