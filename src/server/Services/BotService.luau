@@ -171,6 +171,9 @@ local function buildModel(name: string, slot: number): Model
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
 	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	humanoid.BreakJointsOnDeath = false
+	-- модель создаётся «в падении»: без этого бот после старта ещё ~3 с поднимается
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 	addBib(model, slot)
 	CollectionService:AddTag(model, B.Tag)
 	return model
@@ -233,6 +236,7 @@ end
 -- а без этого бота подхватывает клиент ближайшего игрока и MoveTo идёт рывками.
 local function release(bot: Bot)
 	bot.root.Anchored = false
+	bot.humanoid:ChangeState(Enum.HumanoidStateType.Running)
 	pcall(function()
 		bot.root:SetNetworkOwner(nil)
 	end)
@@ -605,6 +609,10 @@ end
 -- Бот бежит по трассе (не на рубеже, не финишировал) — его могут сбить препятствия и толкнуть.
 function BotService.isRunning(bot: Bot): boolean
 	return bot.state == "Run" and bot.model.Parent ~= nil
+end
+
+function BotService.isKnocked(bot: Bot): boolean
+	return bot.knockedUntil > 0
 end
 
 -- Попал под препятствие: увернулся ли (шанс по профилю — боты не ловят тайминг, как игрок).

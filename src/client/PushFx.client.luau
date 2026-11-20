@@ -3,6 +3,7 @@
 -- (Transform плечевых суставов поверх анимации, без загружаемых анимаций), у цели — облачко пыли.
 -- Сервер шлёт PushFx(pusherUserId, targetUserId) после проверки толчка; target 0 — мимо.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -87,15 +88,28 @@ local function playArms(character: Model)
 	end
 end
 
+-- персонаж по UserId или модель бота по BotId (< 0)
+local function characterById(userId: number): Model?
+	if userId > 0 then
+		local p = Players:GetPlayerByUserId(userId)
+		return p and p.Character
+	elseif userId < 0 then
+		for _, model in CollectionService:GetTagged(Config.Bots.Tag) do
+			if model:IsA("Model") and model:GetAttribute("BotId") == userId then
+				return model
+			end
+		end
+	end
+	return nil
+end
+
 Remotes.get(Remotes.Names.PushFx).OnClientEvent:Connect(function(pusherUserId: number, targetUserId: number)
-	local pusher = Players:GetPlayerByUserId(pusherUserId)
-	local character = pusher and pusher.Character
+	local character = characterById(pusherUserId)
 	if character then
 		playArms(character)
 	end
 	-- у самой цели пыль рисует обработчик падения (HazardClient), здесь — для остальных
-	local target = if targetUserId ~= 0 and targetUserId ~= Players.LocalPlayer.UserId then Players:GetPlayerByUserId(targetUserId) else nil
-	local targetChar = target and target.Character
+	local targetChar = if targetUserId ~= Players.LocalPlayer.UserId then characterById(targetUserId) else nil
 	local root = targetChar and targetChar:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if root then
 		Fx.burst("Dust", root.Position)
