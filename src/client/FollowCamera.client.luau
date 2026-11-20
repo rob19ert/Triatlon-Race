@@ -1,6 +1,8 @@
 --!strict
 -- Камера за спиной вдоль дороги: доворачивать её на поворотах не нужно.
---  * на велокруге — по оси куска дороги (BikeRoad) под игроком, вне дороги — по направлению бега;
+--  * по линии трассы (CoursePath — маршрут ботов от старта до финиша, с упреждением PathLookAhead):
+--    сбили, развернуло — камера сама возвращается вдоль трассы, а не туда, куда несло;
+--  * далеко от линии (срезки) — по оси куска дороги BikeRoad, совсем вне трассы — по направлению бега;
 --  * поворачиваем только по горизонтали вокруг точки фокуса, наклон и зум — как выставил игрок;
 --  * игрок сам повернул камеру (мышь, палец, стик) — авто ждёт ResumeAfter, потом плавно возвращает;
 --  * телепорт (возврат на чекпоинт, срезал круг) — сразу ставим камеру за спину;
@@ -12,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local C = Config.FollowCamera
 if not C.Enabled then
@@ -39,6 +42,74 @@ for _, inst in CollectionService:GetTagged(Config.Bike.RoadTag) do
 end
 CollectionService:GetInstanceAddedSignal(Config.Bike.RoadTag):Connect(addRoad)
 CollectionService:GetInstanceRemovedSignal(Config.Bike.RoadTag):Connect(removeRoad)
+
+-- Линия трассы — только в гонке (в лобби у старта камера не разворачивается к трассе)
+local racing = false
+Remotes.get(Remotes.Names.RaceState).OnClientEvent:Connect(function(payload: any)
+	racing = payload.state == "Racing"
+end)
+
+-- Линия трассы: точки по порядку (сервер кладёт их в ReplicatedStorage при старте).
+local path: { Vector3 } = {}
+task.spawn(function()
+	local folder = ReplicatedStorage:WaitForChild(C.PathFolder, 30)
+	if not folder then
+		return
+	end
+	task.wait(1) -- точки дозаливаются вместе с папкой
+	local items = folder:GetChildren()
+	table.sort(items, function(a, b)
+		return a.Name < b.Name
+	end)
+	local list = {}
+	for _, item in items do
+		if item:IsA("Vector3Value") then
+			table.insert(list, item.Value)
+		end
+	end
+	path = list
+end)
+
+-- Направление трассы у точки pos: проекция на ближайший отрезок, затем точка на PathLookAhead дальше.
+local function pathDirection(pos: Vector3): Vector3?
+	if #path < 2 then
+		return nil
+	end
+	local p = pos * FLAT
+	local bestJ, bestT, bestD = 0, 0, math.huge
+	for j = 1, #path - 1 do
+		local a = path[j] * FLAT
+		local ab = path[j + 1] * FLAT - a
+		local len2 = ab:Dot(ab)
+		local t = if len2 > 1e-6 then math.clamp((p - a):Dot(ab) / len2, 0, 1) else 0
+		local d = (p - (a + ab * t)).Magnitude
+		if d < bestD then
+			bestJ, bestT, bestD = j, t, d
+		end
+	end
+	if bestD > C.PathMaxDistance then
+		return nil
+	end
+	local from = path[bestJ] * FLAT + (path[bestJ + 1] - path[bestJ]) * FLAT * bestT
+	-- пройти LookAhead по линии вперёд
+	local left = C.PathLookAhead
+	local cur = from
+	local j = bestJ
+	while j < #path do
+		local nextPoint = path[j + 1] * FLAT
+		local seg = (nextPoint - cur).Magnitude
+		if seg >= left then
+			cur = cur + (nextPoint - cur).Unit * left
+			left = 0
+			break
+		end
+		left -= seg
+		cur = nextPoint
+		j += 1
+	end
+	local dir = cur - from
+	return if dir.Magnitude > 1e-3 then dir.Unit else nil
+end
 
 local function yawOf(v: Vector3): number
 	return math.atan2(-v.X, -v.Z)
@@ -139,10 +210,15 @@ RunService:BindToRenderStep("FollowCamera", Enum.RenderPriority.Camera.Value + 1
 	local target: Vector3? = nil
 	local velocity = flat(root.AssemblyLinearVelocity)
 	local speed = (root.AssemblyLinearVelocity * FLAT).Magnitude
-	if now >= manualUntil and speed >= C.MinSpeed and velocity then
-		-- дорога чуть впереди (поворот начинаем заранее), иначе под ногами
+	local intent = flat(humanoid.MoveDirection)
+	-- линия трассы (знает, куда «вперёд»): выравниваем, как только игрок жмёт движение —
+	-- даже если упёрся в стенку и почти стоит
+	local course = if racing and now >= manualUntil and (intent or speed >= C.MinSpeed) then pathDirection(pos) else nil
+	if course then
+		target = course
+	elseif now >= manualUntil and speed >= C.MinSpeed and velocity then
+		-- срезка — ось дороги, иначе — бег
 		local axis = roadAxis(pos + velocity * C.LookAhead, look) or roadAxis(pos, look)
-		local intent = flat(humanoid.MoveDirection)
 		if axis then
 			-- ось без знака: берём сторону, куда уже смотрит камера (едешь назад — не разворачиваем)
 			target = if axis:Dot(look) >= 0 then axis else -axis

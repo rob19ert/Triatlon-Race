@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
+local UiScale = require(script.Parent:WaitForChild("UiScale"))
 
 local M = Config.Music
 local player = Players.LocalPlayer
@@ -88,8 +89,12 @@ gui.ResetOnSpawn = false
 
 local button = Instance.new("TextButton")
 button.AnchorPoint = Vector2.new(0, 0)
-button.Position = UDim2.new(0, 12, 0, 64) -- под верхней панелью Roblox
+button.Position = UDim2.new(0, 12, 0, 114) -- под кнопкой «Веломагазин»
 button.Size = UDim2.fromOffset(40, 40)
+UiScale.watch(function(compact: boolean)
+	button.Position = UDim2.new(0, 12, 0, if compact then 94 else 114)
+	button.Size = if compact then UDim2.fromOffset(34, 34) else UDim2.fromOffset(40, 40)
+end)
 button.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 button.BackgroundTransparency = 0.35
 button.TextScaled = true

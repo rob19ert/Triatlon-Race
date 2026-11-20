@@ -124,6 +124,16 @@ local function loadPath()
 			range = if typeof(range) == "number" then range else nil,
 		})
 	end
+	-- линия трассы для камеры игроков (FollowCamera): целиком в ReplicatedStorage, без стриминга
+	local line = Instance.new("Folder")
+	line.Name = Config.FollowCamera.PathFolder
+	for i, wp in waypoints do
+		local v = Instance.new("Vector3Value")
+		v.Name = string.format("%03d", i)
+		v.Value = wp.pos
+		v.Parent = line
+	end
+	line.Parent = ReplicatedStorage
 	for i, wp in waypoints do
 		course[i] = if i == 1 then 0 else course[i - 1] + (wp.pos - waypoints[i - 1].pos).Magnitude
 		if wp.action == "Range" and wp.range then

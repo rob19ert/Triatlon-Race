@@ -11,6 +11,12 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local BikeSkins = require(Shared:WaitForChild("BikeSkins"))
 
 local ShopPreview = require(script.Parent:WaitForChild("ShopPreview"))
+local UiScale = require(script.Parent:WaitForChild("UiScale"))
+-- телефон: магазин занимает почти весь экран, всё внутри — крупнее (BIG — множитель значков)
+local compact = UiScale.isCompact()
+local function big(n: number): number
+	return if compact then math.floor(n * 1.3 + 0.5) else n
+end
 local player = Players.LocalPlayer
 local selectSkin = Remotes.get(Remotes.Names.SelectBikeSkin)
 local showroom = game:GetService("ReplicatedStorage"):WaitForChild("BikeShowroom")
@@ -41,6 +47,7 @@ local function stroke(parent: Instance, color: Color3, thickness: number): UIStr
 	return line
 end
 local function label(parent: Instance, name: string, font: Enum.Font, maxSize: number, color: Color3): TextLabel
+	maxSize = big(maxSize)
 	local text = Instance.new("TextLabel")
 	text.Name = name
 	text.BackgroundTransparency = 1
@@ -64,7 +71,7 @@ local function button(parent: Instance, name: string, text: string, color: Color
 	view.Parent = parent
 	corner(view, 10)
 	local limit = Instance.new("UITextSizeConstraint", view)
-	limit.MaxTextSize = 20
+	limit.MaxTextSize = big(20)
 	local pad = Instance.new("UIPadding", view)
 	pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 8), UDim.new(0, 8)
 	return view
@@ -74,6 +81,7 @@ end
 local open = button(gui, "OpenShop", "🚲 Веломагазин", GOLD)
 open.Position = UDim2.fromOffset(12, 60)
 open.Size = UDim2.fromOffset(170, 46)
+-- на телефоне кнопка входа — меньше
 stroke(open, INK, 3)
 
 local overlay = Instance.new("TextButton")
@@ -98,6 +106,9 @@ corner(panel, 18)
 stroke(panel, rgb(70, 85, 125), 3)
 local limit = Instance.new("UISizeConstraint", panel)
 limit.MaxSize = Vector2.new(1000, 620)
+if compact then
+	panel.Size = UDim2.fromScale(0.985, 0.97)
+end
 local popScale = Instance.new("UIScale", panel)
 
 -- Header: title, level with XP bar, close
@@ -202,7 +213,9 @@ gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 local function layout()
 	local size = body.AbsoluteSize
 	local portrait = size.X < size.Y * 1.1
-	local infoHeight = math.clamp(math.floor(size.Y * 0.24), 84, 118)
+	local infoHeight = if compact
+		then math.clamp(math.floor(size.Y * 0.36), 90, 130)
+		else math.clamp(math.floor(size.Y * 0.24), 84, 118)
 	local columns, rows
 	if portrait then
 		stageCard.Size = UDim2.new(1, 0, 0.56, -5)
@@ -278,7 +291,7 @@ for index, skin in Config.BikeSkins do
 	strip.Name = "Caption"
 	strip.AnchorPoint = Vector2.new(0, 1)
 	strip.Position = UDim2.new(0, 4, 1, -4)
-	strip.Size = UDim2.new(1, -8, 0.26, 0)
+	strip.Size = UDim2.new(1, -8, if compact then 0.36 else 0.26, 0)
 	strip.BackgroundColor3 = INK
 	strip.BackgroundTransparency = 0.25
 	strip.ZIndex = 3
@@ -312,7 +325,7 @@ for index, skin in Config.BikeSkins do
 	local badge = label(tile, "Badge", Enum.Font.GothamBlack, 14, INK)
 	badge.AnchorPoint = Vector2.new(1, 0)
 	badge.Position = UDim2.new(1, -8, 0, 8)
-	badge.Size = UDim2.fromOffset(74, 24)
+	badge.Size = UDim2.fromOffset(big(74), big(24))
 	badge.BackgroundTransparency = 0
 	badge.TextXAlignment = Enum.TextXAlignment.Center
 	badge.ZIndex = 4
@@ -350,17 +363,17 @@ refresh = function()
 			tile.badge.Visible = true
 			tile.badge.Text = "✓"
 			tile.badge.BackgroundColor3 = MINT
-			tile.badge.Size = UDim2.fromOffset(28, 24)
+			tile.badge.Size = UDim2.fromOffset(big(28), big(24))
 		elseif not isUnlocked and skin.robuxOnly then
 			tile.badge.Visible = true
 			tile.badge.Text = priceText(skin)
 			tile.badge.BackgroundColor3 = rgb(110, 225, 130)
-			tile.badge.Size = UDim2.fromOffset(78, 24)
+			tile.badge.Size = UDim2.fromOffset(big(78), big(24))
 		elseif not isUnlocked then
 			tile.badge.Visible = true
 			tile.badge.Text = string.format("🔒 Ур. %d", skin.level)
 			tile.badge.BackgroundColor3 = rgb(225, 230, 240)
-			tile.badge.Size = UDim2.fromOffset(78, 24)
+			tile.badge.Size = UDim2.fromOffset(big(78), big(24))
 		else
 			tile.badge.Visible = false
 		end
@@ -436,6 +449,12 @@ for _, skin in Config.BikeSkins do
 	end
 end
 focus(focused)
+-- телефон / планшет: кнопка входа меньше, шапка ниже (на ходу — поворот экрана, смена окна)
+UiScale.watch(function(isCompact: boolean)
+	compact = isCompact
+	open.Size = if isCompact then UDim2.fromOffset(132, 36) else UDim2.fromOffset(170, 46)
+	open.Position = UDim2.fromOffset(12, if isCompact then 52 else 60)
+end)
 layout()
 
 open.Activated:Connect(function()

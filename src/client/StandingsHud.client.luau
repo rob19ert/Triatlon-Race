@@ -77,11 +77,13 @@ local visibleRows = MAX_ROWS
 local function applyScreenSize()
 	local screen = workspace.CurrentCamera.ViewportSize
 	local small = math.min(screen.X, screen.Y) <= 500
-	visibleRows = if small then SMALL_MAX_ROWS else MAX_ROWS
+	-- совсем низкий экран (телефон с вытянутым экраном): строки ниже — таблица не наезжает на кнопку «Толчок»
+	local tiny = screen.Y < 380
+	visibleRows = if tiny then 2 elseif small then SMALL_MAX_ROWS else MAX_ROWS -- tiny: двое лидеров + своя строка
 	panel.Size = UDim2.fromOffset(if small then SMALL_WIDTH else 200, 0)
 	for _, row in rows do
-		row.Size = UDim2.new(1, 0, 0, if small then SMALL_ROW_HEIGHT else ROW_HEIGHT)
-		row.TextSize = if small then 12 else 15
+		row.Size = UDim2.new(1, 0, 0, if tiny then 14 elseif small then SMALL_ROW_HEIGHT else ROW_HEIGHT)
+		row.TextSize = if tiny then 11 elseif small then 12 else 15
 	end
 end
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyScreenSize)

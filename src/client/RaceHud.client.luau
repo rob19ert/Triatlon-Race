@@ -18,6 +18,8 @@ local player = Players.LocalPlayer
 local current: Types.RaceStatePayload = { state = "Lobby", endsAt = 0, raceStartedAt = 0 }
 local myTime: number? = nil
 local resultsToken = 0 -- отменяет отложенный показ таблицы
+local UiScale = require(script.Parent:WaitForChild("UiScale"))
+local compact = false
 
 ---------------------------------------------------------------- UI
 
@@ -114,6 +116,18 @@ profileTextSize.Parent = profileCard
 
 gui.Parent = player:WaitForChild("PlayerGui")
 
+-- телефон: итоги, карточка профиля и табло — компактнее
+UiScale.watch(function(isCompact: boolean)
+	compact = isCompact
+	resultsFrame.Size = if isCompact then UDim2.new(0.55, 0, 0.62, 0) else UDim2.new(0.5, 0, 0.6, 0)
+	sizeLimit.MinSize = if isCompact then Vector2.new(240, 150) else Vector2.new(280, 200)
+	resultsText.TextSize = if isCompact then 14 else 22
+	profileCard.Position = UDim2.new(0.5, 0, 1, -(if isCompact then 6 else H.ProfileBottom))
+	profileSize.MaxSize = if isCompact then Vector2.new(260, 46) else Vector2.new(H.ProfileWidth, H.ProfileHeight)
+	profileTextSize.MaxTextSize = if isCompact then 11 else H.ProfileTextSize
+	feed.TextSize = if isCompact then 14 else 18
+end)
+
 ---------------------------------------------------------------- логика отображения
 
 local function formatTime(seconds: number): string
@@ -165,8 +179,10 @@ local function render()
 	local racing = s == "Racing"
 	status.AnchorPoint = if racing then Vector2.new(1, 0) else Vector2.new(0.5, 0)
 	status.Position = if racing then UDim2.new(1, -H.RightMargin, 0, H.TimerTop) else UDim2.new(0.5, 0, 0, 8)
-	status.Size = if racing then UDim2.fromOffset(H.TimerWidth, H.TimerHeight) else UDim2.new(0.6, 0, 0, 48)
-	textLimit.MaxTextSize = if racing then H.TimerTextSize else 48
+	local bigHeight = if compact then 32 else 48 -- «Старт через…», отсчёт, итоги
+	status.Size = if racing then UDim2.fromOffset(H.TimerWidth, H.TimerHeight) else UDim2.new(0.6, 0, 0, bigHeight)
+	statusLimit.MaxSize = Vector2.new(if compact then 300 else 360, bigHeight)
+	textLimit.MaxTextSize = if racing then H.TimerTextSize else bigHeight
 	if s == "Lobby" then
 		if current.endsAt > 0 then
 			status.Text = string.format("Старт через %d", math.ceil(remaining()))

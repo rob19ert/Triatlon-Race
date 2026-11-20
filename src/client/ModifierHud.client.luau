@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Remotes = require(Shared:WaitForChild("Remotes"))
 local Modifier = require(Shared:WaitForChild("Modifier"))
+local UiScale = require(script.Parent:WaitForChild("UiScale"))
 
 local M = Config.Modifiers
 local CARD_W, CARD_H, GAP = 170, 136, 12
@@ -117,10 +118,11 @@ for i = 1, M.Options do
 	cards[i] = card
 end
 
+-- влезть и по ширине, и по высоте (на телефоне карточки иначе закрывают пол-экрана и джойстик)
 local function refreshScale()
-	local camera = workspace.CurrentCamera
-	local width = if camera then camera.ViewportSize.X else 1000
-	scale.Scale = math.min(1, width * 0.94 / panel.Size.X.Offset)
+	local size = Vector2.new(panel.Size.X.Offset, panel.Size.Y.Offset)
+	scale.Scale = UiScale.fit(size, 0.94, Config.Ui.VoteHeightShare)
+	panel.Position = UDim2.fromScale(0.5, if UiScale.isCompact() then 0.52 else 0.62)
 end
 
 local function refreshVote()
