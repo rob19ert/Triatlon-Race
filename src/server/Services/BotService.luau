@@ -53,6 +53,8 @@ export type Bot = {
 	index: number, -- следующая точка маршрута
 	spawnIndex: number,
 	falls: number, -- падений в воду с текущей точки Spawn
+	offset: number, -- «резинка»: где держаться относительно игрока, стад по трассе (+ впереди)
+	pace: number, -- текущий множитель скорости от «резинки»
 	riding: boolean,
 	stages: number, -- завершённые стрельбы
 	penalty: number,
@@ -72,6 +74,8 @@ export type Bot = {
 }
 
 local waypoints: { Waypoint } = {}
+local course: { number } = {} -- дистанция по трассе до точки i (стад)
+local rangeIndex: { [number]: number } = {} -- номер стрельбы -> индекс точки Range
 local bots: { Bot } = {}
 local nextId = -1
 local folder: Folder
@@ -119,6 +123,88 @@ local function loadPath()
 			action = if typeof(action) == "string" then action else nil,
 			range = if typeof(range) == "number" then range else nil,
 		})
+	end
+	for i, wp in waypoints do
+		course[i] = if i == 1 then 0 else course[i - 1] + (wp.pos - waypoints[i - 1].pos).Magnitude
+		if wp.action == "Range" and wp.range then
+			rangeIndex[wp.range] = i
+		end
+	end
+end
+
+---------------------------------------------------------------- «резинка»
+
+local function flatV(v: Vector3): Vector3
+	return Vector3.new(v.X, 0, v.Z)
+end
+
+-- Дистанция по трассе точки pos, если она на отрезках маршрута lo..hi (проекция на ближайший отрезок).
+local function courseAt(pos: Vector3, lo: number, hi: number): number
+	local best, bestD = course[lo] or 0, math.huge
+	for j = math.max(lo, 1), math.min(hi, #waypoints) - 1 do
+		local a = flatV(waypoints[j].pos)
+		local ab = flatV(waypoints[j + 1].pos) - a
+		local len2 = ab:Dot(ab)
+		local t = if len2 > 1e-6 then math.clamp(flatV(pos - a):Dot(ab) / len2, 0, 1) else 0
+		local d = (flatV(pos) - (a + ab * t)).Magnitude
+		if d < bestD then
+			bestD = d
+			best = course[j] + t * math.sqrt(len2)
+		end
+	end
+	return best
+end
+
+-- Где по трассе игрок, который ещё бежит (nil — не в гонке / финишировал).
+-- Окно поиска — по числу завершённых стрельб: маршрут петляет, одна точка мира может быть на разных участках.
+local function humanCourse(player: Player): number?
+	if not ProgressTracker.isTracked(player) then
+		return nil
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not root then
+		return nil
+	end
+	local stages = ShootingService.getCompletedStages(player)
+	if ShootingService.isShooting(player) then
+		local i = rangeIndex[stages + 1]
+		return if i then course[i] else nil
+	end
+	local lo = if stages >= 1 then rangeIndex[stages] or 1 else 1
+	local hi = rangeIndex[stages + 1] or #waypoints
+	return courseAt(root.Position, lo, hi)
+end
+
+local function botCourse(bot: any): number
+	local i = math.clamp(bot.index, 2, #waypoints)
+	return courseAt(bot.root.Position, i - 1, i)
+end
+
+-- Множитель скорости каждого бота: к ближайшему игроку (+ свой сдвиг).
+local function updatePace()
+	local humans: { number } = {}
+	for _, player in Players:GetPlayers() do
+		local c = humanCourse(player)
+		if c then
+			table.insert(humans, c)
+		end
+	end
+	local K = B.CatchUp
+	for _, bot in bots do
+		if bot.state ~= "Run" or #humans == 0 or #waypoints < 2 then
+			bot.pace = 1
+			continue
+		end
+		local mine = botCourse(bot)
+		local nearest = humans[1]
+		for _, c in humans do
+			if math.abs(c - mine) < math.abs(nearest - mine) then
+				nearest = c
+			end
+		end
+		local gap = nearest + bot.offset - mine -- > 0: бот отстаёт от своего места
+		bot.pace = math.clamp(1 + gap * K.PerStud, K.Min, K.Max)
 	end
 end
 
@@ -458,7 +544,7 @@ local function stepBot(bot: Bot, now: number)
 		return
 	end
 
-	local speed = if bot.riding then bot.profile.bike else bot.profile.run
+	local speed = (if bot.riding then bot.profile.bike else bot.profile.run) * bot.pace
 	local careful = isCareful(bot.index)
 	if careful then
 		speed = math.min(speed, B.CarefulSpeed)
@@ -515,6 +601,7 @@ local function step()
 		end
 	end
 	probeParams.FilterDescendantsInstances = exclude
+	updatePace()
 	local now = os.clock()
 	for _, bot in bots do
 		if bot.model.Parent then
@@ -553,6 +640,8 @@ function BotService.spawn(slot: number, profileName: string, cf: CFrame): Bot?
 		index = 1,
 		spawnIndex = 1,
 		falls = 0,
+		offset = rng:NextNumber(-B.CatchUp.Spread, B.CatchUp.Spread),
+		pace = 1,
 		riding = false,
 		stages = 0,
 		penalty = 0,
