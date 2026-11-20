@@ -34,9 +34,9 @@ local function viewport(parent: GuiObject): ViewportFrame
 	view.Name = "View"
 	view.Size = UDim2.fromScale(1, 1)
 	view.BackgroundTransparency = 1
-	view.Ambient = rgb(170, 175, 195)
-	view.LightColor = rgb(255, 244, 228)
-	view.LightDirection = Vector3.new(0.5, -1, 0.6)
+	view.Ambient = rgb(205, 208, 222)
+	view.LightColor = rgb(255, 255, 255)
+	view.LightDirection = Vector3.new(0.7, -1, 0.35)
 	view.Parent = parent
 	return view
 end
@@ -70,10 +70,11 @@ function ShopPreview.thumbnail(parent: GuiObject, source: Model, tint: Color3): 
 	local direction = Vector3.new(-1, 0.35, -0.5).Unit
 	local function frame()
 		local aspect = view.AbsoluteSize.X / math.max(1, view.AbsoluteSize.Y)
-		local radius = math.max(size.Y, size.Z) * 0.5
-		local distance = fitDistance(radius, camera.FieldOfView, aspect) * 0.95
-		-- Aim a bit below the bike so it sits above the caption strip.
-		local target = centre.Position - Vector3.new(0, size.Y * 0.28, 0)
+		-- кадр — отдельно по высоте и по ширине: плитка широкая и низкая, велосипед — тоже
+		local half = math.rad(camera.FieldOfView) / 2
+		local halfH = math.atan(math.tan(half) * aspect)
+		local distance = math.max(size.Y * 0.6 / math.tan(half), size.Z * 0.55 / math.tan(halfH))
+		local target = centre.Position
 		camera.CFrame = CFrame.lookAt(target + direction * distance, target)
 	end
 	view:GetPropertyChangedSignal("AbsoluteSize"):Connect(frame)
@@ -123,7 +124,7 @@ function ShopPreview.stage(parent: GuiObject): Stage
 
 	local function frame()
 		local aspect = view.AbsoluteSize.X / math.max(1, view.AbsoluteSize.Y)
-		local radius = math.max(size.Z * 0.66, size.Y * 0.62)
+		local radius = math.max(size.Z * 0.46, size.Y * 0.5)
 		local distance = fitDistance(radius, camera.FieldOfView, aspect)
 		local target = centre.Position - Vector3.new(0, size.Y * 0.22, 0)
 		camera.CFrame = CFrame.lookAt(target + Vector3.new(-0.9, 0.42, 0).Unit * distance, target)

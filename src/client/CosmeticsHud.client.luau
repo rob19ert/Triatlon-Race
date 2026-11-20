@@ -181,20 +181,17 @@ info.Name = "Info"
 info.BackgroundTransparency = 1
 info.Parent = stageCard
 
-local bikeName = label(info, "BikeName", Enum.Font.GothamBlack, 28, WHITE)
-bikeName.Size = UDim2.new(1, 0, 0.3, 0)
-local rarityText = label(info, "Rarity", Enum.Font.GothamBold, 16, WHITE)
-rarityText.Position = UDim2.fromScale(0, 0.3)
-rarityText.Size = UDim2.new(1, 0, 0.17, 0)
-local blurb = label(info, "Blurb", Enum.Font.GothamMedium, 15, MUTED)
-blurb.Position = UDim2.fromScale(0, 0.47)
-blurb.Size = UDim2.new(0.55, -8, 0.53, 0)
-blurb.TextWrapped = true
-blurb.TextYAlignment = Enum.TextYAlignment.Top
+-- продаёт картинка: крупное имя и звёзды редкости, без описаний
+local bikeName = label(info, "BikeName", Enum.Font.GothamBlack, 30, WHITE)
+bikeName.Position = UDim2.fromScale(0, 0.04)
+bikeName.Size = UDim2.new(0.5, -6, 0.56, 0)
+local rarityText = label(info, "Rarity", Enum.Font.GothamBold, 18, WHITE)
+rarityText.Position = UDim2.fromScale(0, 0.62)
+rarityText.Size = UDim2.new(0.5, -6, 0.34, 0)
 local action = button(info, "Action", "", GOLD)
-action.AnchorPoint = Vector2.new(1, 1)
-action.Position = UDim2.fromScale(1, 1)
-action.Size = UDim2.new(0.45, 0, 0.5, 0)
+action.AnchorPoint = Vector2.new(1, 0.5)
+action.Position = UDim2.fromScale(1, 0.5)
+action.Size = UDim2.new(0.5, 0, 0.9, 0)
 local actionStroke = stroke(action, INK, 3)
 
 local grid = Instance.new("ScrollingFrame")
@@ -214,8 +211,8 @@ local function layout()
 	local size = body.AbsoluteSize
 	local portrait = size.X < size.Y * 1.1
 	local infoHeight = if compact
-		then math.clamp(math.floor(size.Y * 0.36), 90, 130)
-		else math.clamp(math.floor(size.Y * 0.24), 84, 118)
+		then math.clamp(math.floor(size.Y * 0.27), 62, 96)
+		else math.clamp(math.floor(size.Y * 0.18), 64, 96)
 	local columns, rows
 	if portrait then
 		stageCard.Size = UDim2.new(1, 0, 0.56, -5)
@@ -223,14 +220,14 @@ local function layout()
 		grid.Size = UDim2.new(1, 0, 0.44, -5)
 		columns, rows = 3, 2
 	else
-		stageCard.Size = UDim2.new(0.56, -5, 1, 0)
-		grid.Position = UDim2.new(0.56, 5, 0, 0)
-		grid.Size = UDim2.new(0.44, -5, 1, 0)
+		stageCard.Size = UDim2.new(0.6, -5, 1, 0)
+		grid.Position = UDim2.new(0.6, 5, 0, 0)
+		grid.Size = UDim2.new(0.4, -5, 1, 0)
 		columns, rows = 2, 3
 	end
-	stageView.Size = UDim2.new(1, -16, 1, -infoHeight - 20)
-	info.Position = UDim2.new(0, 16, 1, -infoHeight - 10)
-	info.Size = UDim2.new(1, -32, 0, infoHeight)
+	stageView.Size = UDim2.new(1, -16, 1, -infoHeight - 14)
+	info.Position = UDim2.new(0, 14, 1, -infoHeight - 8)
+	info.Size = UDim2.new(1, -28, 0, infoHeight)
 	local area = grid.AbsoluteSize
 	local pad = gridLayout.CellPadding.X.Offset
 	local width = math.floor((area.X - 6 - (columns - 1) * pad) / columns)
@@ -282,7 +279,9 @@ for index, skin in Config.BikeSkins do
 	thumb.Name = "Thumb"
 	thumb.BackgroundTransparency = 1
 	thumb.Position = UDim2.fromOffset(4, 4)
-	thumb.Size = UDim2.new(1, -8, 1, -8)
+	-- превью — только над подписью: велосипед целиком и крупно, подпись его не закрывает
+	local captionShare = if compact then 0.3 else 0.24
+	thumb.Size = UDim2.new(1, -8, 1 - captionShare, -6)
 	thumb.Parent = tile
 	ShopPreview.thumbnail(thumb, showroom:WaitForChild(skin.id) :: Model, rarity.color)
 
@@ -291,7 +290,7 @@ for index, skin in Config.BikeSkins do
 	strip.Name = "Caption"
 	strip.AnchorPoint = Vector2.new(0, 1)
 	strip.Position = UDim2.new(0, 4, 1, -4)
-	strip.Size = UDim2.new(1, -8, if compact then 0.36 else 0.26, 0)
+	strip.Size = UDim2.new(1, -8, captionShare, 0)
 	strip.BackgroundColor3 = INK
 	strip.BackgroundTransparency = 0.25
 	strip.ZIndex = 3
@@ -324,7 +323,7 @@ for index, skin in Config.BikeSkins do
 
 	local badge = label(tile, "Badge", Enum.Font.GothamBlack, 14, INK)
 	badge.AnchorPoint = Vector2.new(1, 0)
-	badge.Position = UDim2.new(1, -8, 0, 8)
+	badge.Position = UDim2.new(1, -6, 0, 6)
 	badge.Size = UDim2.fromOffset(big(74), big(24))
 	badge.BackgroundTransparency = 0
 	badge.TextXAlignment = Enum.TextXAlignment.Center
@@ -334,6 +333,9 @@ for index, skin in Config.BikeSkins do
 	tiles[skin.id] = { button = tile, highlight = highlight, badge = badge, lock = lock }
 	tile.Activated:Connect(function()
 		focus(skin)
+		if player:GetAttribute(Attributes.ProfileLevel) ~= nil and unlocked(skin) and BikeSkins.effective(player) ~= skin.id then
+			selectSkin:FireServer(skin.id)
+		end
 	end)
 end
 
@@ -368,7 +370,7 @@ refresh = function()
 			tile.badge.Visible = true
 			tile.badge.Text = priceText(skin)
 			tile.badge.BackgroundColor3 = rgb(110, 225, 130)
-			tile.badge.Size = UDim2.fromOffset(big(78), big(24))
+			tile.badge.Size = UDim2.fromOffset(62, 20) -- компактный ценник: не закрывает велосипед
 		elseif not isUnlocked then
 			tile.badge.Visible = true
 			tile.badge.Text = string.format("🔒 Lv. %d", skin.level)
@@ -384,16 +386,15 @@ refresh = function()
 	bikeName.Text = skin.title
 	rarityText.Text = string.format("%s  %s", stars(rarity.stars), rarity.title)
 	rarityText.TextColor3 = rarity.color
-	blurb.Text = skin.blurb or ""
 
 	local isUnlocked = loaded and unlocked(skin)
 	local canAct = true
 	if not loaded then
 		action.Text, action.BackgroundColor3, canAct = "Profile unavailable", rgb(80, 92, 120), false
 	elseif selected == skin.id then
-		action.Text, action.BackgroundColor3, canAct = "✓ SELECTED", MINT, false
+		action.Text, action.BackgroundColor3, canAct = "✓ RIDING", MINT, false
 	elseif isUnlocked then
-		action.Text, action.BackgroundColor3 = "SELECT", GOLD
+		action.Text, action.BackgroundColor3 = "RIDE IT", GOLD
 	elseif skin.productId > 0 then
 		action.Text, action.BackgroundColor3 = "BUY · " .. priceText(skin), rgb(110, 225, 130)
 	else
