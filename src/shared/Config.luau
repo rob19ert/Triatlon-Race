@@ -4,13 +4,14 @@
 local Config = {
 	Cosmetics = {
 		SelectionCooldown = 1,
+		-- image — рендер велосипеда для плиток магазина (снят в Studio на фоне, вырезан, загружен; 640 px, PNG с прозрачностью)
 		BikeSkins = {
-			{ id = "auto", title = "Bubble Cruiser", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Bubbles in the basket, wind in your hair." },
-			{ id = "ice", title = "Orbit", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Rumor has it, it rode to the Moon and back." },
-			{ id = "ember", title = "Fire Dragon", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 3733029662, robuxOnly = true, rarity = "Rare", blurb = "Hot wheels. Do not touch!" },
-			{ id = "lime", title = "Forest Ranger", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 3733029484, robuxOnly = true, rarity = "Rare", blurb = "Smells like pine needles. And a bit like victory." },
-			{ id = "violet", title = "Neon Arrow", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 3733028459, robuxOnly = true, rarity = "Epic", blurb = "Glows even in daylight. Especially in daylight." },
-			{ id = "gold", title = "Steam Express", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 3733029726, robuxOnly = true, rarity = "Legendary", blurb = "Choo-choo! Steam not included." },
+			{ id = "auto", image = "rbxassetid://88674294943373", title = "Bubble Cruiser", color = Color3.fromRGB(160, 160, 170), level = 1, productId = 0, rarity = "Common", blurb = "Bubbles in the basket, wind in your hair." },
+			{ id = "ice", image = "rbxassetid://71995521978713", title = "Orbit", color = Color3.fromRGB(65, 200, 255), level = 1, productId = 0, rarity = "Common", blurb = "Rumor has it, it rode to the Moon and back." },
+			{ id = "ember", image = "rbxassetid://89834166123096", title = "Fire Dragon", color = Color3.fromRGB(245, 80, 55), level = 1, productId = 3733029662, robuxOnly = true, rarity = "Rare", blurb = "Hot wheels. Do not touch!" },
+			{ id = "lime", image = "rbxassetid://96206801788912", title = "Forest Ranger", color = Color3.fromRGB(155, 220, 45), level = 2, productId = 3733029484, robuxOnly = true, rarity = "Rare", blurb = "Smells like pine needles. And a bit like victory." },
+			{ id = "violet", image = "rbxassetid://126470375272171", title = "Neon Arrow", color = Color3.fromRGB(160, 100, 245), level = 3, productId = 3733028459, robuxOnly = true, rarity = "Epic", blurb = "Glows even in daylight. Especially in daylight." },
+			{ id = "gold", image = "rbxassetid://85275526670965", title = "Steam Express", color = Color3.fromRGB(245, 185, 45), level = 4, productId = 3733029726, robuxOnly = true, rarity = "Legendary", blurb = "Choo-choo! Steam not included." },
 		},
 		-- robuxOnly: открывается только покупкой (Developer Product), уровень не открывает
 		-- Редкость — только внешний вид, на езду не влияет

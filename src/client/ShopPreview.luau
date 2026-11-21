@@ -1,5 +1,6 @@
 --!strict
 -- 3D previews for the bike shop: static thumbnails and a spinning podium.
+local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config")).Cosmetics.Showroom
@@ -59,9 +60,35 @@ local function fitDistance(radius: number, fov: number, aspect: number): number
 	return radius / math.sin(math.min(half, horizontal))
 end
 
-function ShopPreview.thumbnail(parent: GuiObject, source: Model, tint: Color3): Frame
+-- image — готовый рендер (чётче 3D-окошка); пока не загрузился — живое 3D.
+function ShopPreview.thumbnail(parent: GuiObject, source: Model, tint: Color3, image: string?): Frame
 	local back = backdrop(parent, tint)
 	local view = viewport(back)
+	if image then
+		local picture = Instance.new("ImageLabel")
+		picture.Name = "Render"
+		picture.BackgroundTransparency = 1
+		picture.AnchorPoint = Vector2.new(0.5, 0.5)
+		picture.Position = UDim2.fromScale(0.5, 0.52)
+		picture.Size = UDim2.fromScale(0.96, 0.96)
+		picture.ScaleType = Enum.ScaleType.Fit
+		picture.Image = image
+		picture.ZIndex = 2
+		picture.Parent = back
+		-- IsLoaded не шлёт сигнал изменения: ждём загрузку явно, потом прячем 3D
+		task.spawn(function()
+			pcall(function()
+				ContentProvider:PreloadAsync({ picture })
+			end)
+			for _ = 1, 40 do
+				if picture.IsLoaded then
+					view.Visible = false
+					return
+				end
+				task.wait(0.25)
+			end
+		end)
+	end
 	local _, centre, size = place(source, view)
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 30

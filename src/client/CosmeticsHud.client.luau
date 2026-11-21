@@ -283,7 +283,7 @@ for index, skin in Config.BikeSkins do
 	local captionShare = if compact then 0.3 else 0.24
 	thumb.Size = UDim2.new(1, -8, 1 - captionShare, -6)
 	thumb.Parent = tile
-	ShopPreview.thumbnail(thumb, showroom:WaitForChild(skin.id) :: Model, rarity.color)
+	ShopPreview.thumbnail(thumb, showroom:WaitForChild(skin.id) :: Model, rarity.color, skin.image)
 
 	-- Rarity stripe and name along the bottom
 	local strip = Instance.new("Frame")
