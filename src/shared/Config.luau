@@ -466,6 +466,43 @@ local Config = {
 		Bonk = { id = 3765689841, volume = 0.8 }, -- сбил маятник
 	},
 
+	-- Значки (AwardService). ID — из Creator Hub (Engagement → Badges); 0 — значок ещё не создан, не выдаётся.
+	Badges = {
+		Welcome = 0, -- зашёл в игру
+		FirstFinish = 0, -- первый финиш
+		CleanShooter = 0, -- стрельба 10/10 за гонку
+		Champion = 0, -- 1-е место (в гонке хотя бы с одним соперником, боты считаются)
+		Speedster = 0, -- финиш быстрее SpeedsterSeconds
+		SpeedsterSeconds = 90,
+	},
+
+	-- Приглашения друзей (InviteClient + DataService): друг впервые зашёл по приглашению —
+	-- награда обоим (один раз на друга; Roblox сам передаёт, кто пригласил — JoinData.ReferredByPlayerId)
+	Invites = {
+		InviterXP = 200,
+		InviteeXP = 100,
+		Prompt = "Race me in Champion Chaos!",
+		Button = "👥 Invite friends",
+		InviterNotice = "🎉 %s joined from your invite! +%d XP",
+		InviteeNotice = "👋 Welcome! Invite bonus: +%d XP",
+	},
+
+	-- Ежедневная награда: первый финиш за день (по UTC) — бонус опыта
+	Daily = {
+		XP = 150,
+		Notice = "🎁 Daily bonus: +%d XP",
+	},
+
+	-- Рекорды недели (LeaderboardService): лучшее итоговое время за неделю (пн–вс, UTC) на табло в лобби
+	Leaderboard = {
+		StoreName = "WeeklyBest_v1", -- + номер недели; в Studio — с суффиксом _Studio
+		Size = 10,
+		RefreshSeconds = 60,
+		BoardName = "WeeklyBoard", -- Workspace/WeeklyBoard (Screen — деталь, на которую вешается табло)
+		Title = "🏆 BEST TIMES THIS WEEK",
+		Empty = "No finishes yet — be the first!",
+	},
+
 	-- Подстройка интерфейса под экран (UiScale): «компактный» — телефон в ландшафте
 	Ui = {
 		CompactHeight = 500, -- экран ниже этого (в точках GUI) — телефон

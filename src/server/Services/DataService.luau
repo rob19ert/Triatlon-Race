@@ -8,7 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Attributes = require(ReplicatedStorage.Shared.Attributes)
-local C = require(ReplicatedStorage.Shared.Config).Profile
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Config = require(ReplicatedStorage.Shared.Config)
+local C = Config.Profile
 
 type Profile = {
 	revision: number,
@@ -22,6 +24,9 @@ type Profile = {
 	firstFinish: boolean,
 	veteran: boolean,
 	recent: { string },
+	lastDaily: number?, -- номер дня (UTC), когда получен ежедневный бонус
+	referredBy: number?, -- кто пригласил (UserId); бонус за приглашение — один раз
+	referrals: number, -- скольких друзей привёл
 }
 
 local studio = RunService:IsStudio()
@@ -47,6 +52,9 @@ local function normalize(raw: any): Profile
 		firstFinish = data.firstFinish == true,
 		veteran = data.veteran == true,
 		recent = if typeof(data.recent) == "table" then table.clone(data.recent) else {},
+		lastDaily = if typeof(data.lastDaily) == "number" then data.lastDaily else nil,
+		referredBy = if typeof(data.referredBy) == "number" then data.referredBy else nil,
+		referrals = if typeof(data.referrals) == "number" then data.referrals else 0,
 	}
 end
 
@@ -108,8 +116,15 @@ local function load(player: Player)
 	end
 end
 
-local function update(player: Player, apply: (any) -> Profile?): boolean
-	local userId = player.UserId
+local function notify(player: Player?, text: string)
+	if player and player.Parent == Players then
+		Remotes.get(Remotes.Names.Notice):FireClient(player, text)
+	end
+end
+
+-- Профиль по UserId: игрок может быть не в сети (пригласивший друга).
+local function updateUser(userId: number, apply: (any) -> Profile?): boolean
+	local online = Players:GetPlayerByUserId(userId)
 	local dataStore = store
 	if not dataStore then
 		local profile = apply(memory[userId])
@@ -117,7 +132,9 @@ local function update(player: Player, apply: (any) -> Profile?): boolean
 			return false
 		end
 		memory[userId] = profile
-		publish(player, profile)
+		if online then
+			publish(online, profile)
+		end
 		return true
 	end
 
@@ -129,10 +146,21 @@ local function update(player: Player, apply: (any) -> Profile?): boolean
 	if not ok then
 		warn("[DataService] Profile update failed for", userId, value)
 	elseif value then
-		publish(Players:GetPlayerByUserId(userId) or player, normalize(value))
+		local target = Players:GetPlayerByUserId(userId)
+		if target then
+			publish(target, normalize(value))
+		end
 		return true
 	end
 	return false
+end
+
+local function update(player: Player, apply: (any) -> Profile?): boolean
+	return updateUser(player.UserId, apply)
+end
+
+local function today(): number
+	return os.time() // 86400
 end
 
 function DataService.selectBikeSkin(player: Player, id: string, requiredLevel: number): boolean
@@ -161,6 +189,7 @@ end
 
 function DataService.recordFinish(player: Player, seconds: number, hits: number, shots: number)
 	local id = HttpService:GenerateGUID(false)
+	local dailyGranted = false
 	local function apply(raw: any): Profile
 		local profile = normalize(raw)
 		if table.find(profile.recent, id) then
@@ -174,6 +203,12 @@ function DataService.recordFinish(player: Player, seconds: number, hits: number,
 		profile.shots += shots
 		profile.firstFinish = true
 		profile.veteran = profile.finishes >= C.VeteranFinishes
+		-- ежедневный бонус: первый финиш за день
+		dailyGranted = profile.lastDaily ~= today()
+		if dailyGranted then
+			profile.lastDaily = today()
+			profile.xp += Config.Daily.XP
+		end
 		table.insert(profile.recent, id)
 		if #profile.recent > C.RecentResultLimit then
 			table.remove(profile.recent, 1)
@@ -181,11 +216,63 @@ function DataService.recordFinish(player: Player, seconds: number, hits: number,
 		return profile
 	end
 
-	task.spawn(update, player, apply)
+	task.spawn(function()
+		if update(player, apply) and dailyGranted then
+			notify(player, string.format(Config.Daily.Notice, Config.Daily.XP))
+		end
+	end)
+end
+
+-- Зашёл по приглашению друга (Roblox передаёт, кто пригласил): новичку и пригласившему — опыт,
+-- один раз на нового игрока (у кого ещё нет ни финишей, ни пригласившего).
+local function checkReferral(player: Player)
+	local ok, joinData = pcall(function()
+		return player:GetJoinData()
+	end)
+	if not ok or typeof(joinData) ~= "table" then
+		return
+	end
+	local inviter = joinData.ReferredByPlayerId
+	if typeof(inviter) ~= "number" then
+		inviter = tonumber(joinData.LaunchData)
+	end
+	if typeof(inviter) ~= "number" or inviter <= 0 or inviter == player.UserId then
+		return
+	end
+	local I = Config.Invites
+	local fresh = false
+	local okInvitee = update(player, function(raw)
+		local profile = normalize(raw)
+		fresh = profile.referredBy == nil and profile.finishes == 0
+		if not fresh then
+			return nil -- уже играл или уже награждён — ничего не меняем
+		end
+		profile.referredBy = inviter
+		profile.xp += I.InviteeXP
+		profile.revision += 1
+		return profile
+	end)
+	if not okInvitee or not fresh then
+		return
+	end
+	notify(player, string.format(I.InviteeNotice, I.InviteeXP))
+	if updateUser(inviter, function(raw)
+		local profile = normalize(raw)
+		profile.xp += I.InviterXP
+		profile.referrals += 1
+		profile.revision += 1
+		return profile
+	end) then
+		notify(Players:GetPlayerByUserId(inviter), string.format(I.InviterNotice, player.DisplayName, I.InviterXP))
+	end
+	print(string.format("[DataService] %s joined from %d's invite", player.Name, inviter))
 end
 
 function DataService.start()
-	Players.PlayerAdded:Connect(load)
+	Players.PlayerAdded:Connect(function(player)
+		load(player)
+		checkReferral(player)
+	end)
 	Players.PlayerRemoving:Connect(function(player)
 		revisionShown[player] = nil
 	end)
