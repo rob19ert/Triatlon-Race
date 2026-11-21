@@ -1,5 +1,6 @@
 --!strict
--- Камера за спиной вдоль дороги: доворачивать её на поворотах не нужно.
+-- Камера на велокруге (только пока игрок на велосипеде): за спиной вдоль дороги, доворачивать не нужно.
+-- Пешком (бег с препятствиями, лобби) — обычная камера Roblox, этот скрипт её не трогает.
 --  * в гонке — привязана к линии трассы (CoursePath — маршрут ботов, с упреждением PathLookAhead):
 --    всегда смотрит вперёд по трассе, удары и толчки её не крутят; оглянуться — потянуть камеру,
 --    через LookBackTime она вернётся вперёд; после возврата на чекпоинт — сразу вперёд по трассе;
@@ -16,6 +17,7 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Attributes = require(ReplicatedStorage.Shared.Attributes)
 
 local C = Config.FollowCamera
 if not C.Enabled then
@@ -180,6 +182,13 @@ RunService:BindToRenderStep("FollowCamera", Enum.RenderPriority.Camera.Value + 1
 		or camera.CameraType ~= Enum.CameraType.Custom
 		or camera.CameraSubject ~= humanoid
 	then
+		reset()
+		return
+	end
+
+	-- только на велосипеде: пешком (бег с препятствиями, лобби, финиш) камера целиком у игрока —
+	-- никаких доворотов, они мешают управлению
+	if player:GetAttribute(Attributes.Riding) ~= true then
 		reset()
 		return
 	end
