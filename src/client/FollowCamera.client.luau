@@ -1,7 +1,8 @@
 --!strict
 -- Камера за спиной вдоль дороги: доворачивать её на поворотах не нужно.
---  * по линии трассы (CoursePath — маршрут ботов от старта до финиша, с упреждением PathLookAhead):
---    сбили, развернуло — камера сама возвращается вдоль трассы, а не туда, куда несло;
+--  * в гонке — привязана к линии трассы (CoursePath — маршрут ботов, с упреждением PathLookAhead):
+--    всегда смотрит вперёд по трассе, удары и толчки её не крутят; оглянуться — потянуть камеру,
+--    через LookBackTime она вернётся вперёд; после возврата на чекпоинт — сразу вперёд по трассе;
 --  * далеко от линии (срезки) — по оси куска дороги BikeRoad, совсем вне трассы — по направлению бега;
 --  * поворачиваем только по горизонтали вокруг точки фокуса, наклон и зум — как выставил игрок;
 --  * игрок сам повернул камеру (мышь, палец, стик) — авто ждёт ResumeAfter, потом плавно возвращает;
@@ -189,16 +190,20 @@ RunService:BindToRenderStep("FollowCamera", Enum.RenderPriority.Camera.Value + 1
 		return
 	end
 	local yaw = yawOf(look)
+	local pos = root.Position
+	-- в гонке на трассе — камера привязана к трассе
+	local course = if racing then pathDirection(pos) else nil
 	if lastYaw and math.abs(wrap(yaw - lastYaw)) > C.ManualEps then
-		manualUntil = now + C.ResumeAfter
+		-- игрок сам повернул камеру: оглянуться можно, потом — назад вперёд
+		manualUntil = now + (if course then C.LookBackTime else C.ResumeAfter)
 	end
 
-	local pos = root.Position
 	local teleported = lastPos ~= nil and (pos - (lastPos :: Vector3)).Magnitude > C.SnapDistance
 	lastPos = pos
 
 	if teleported then
-		local forward = flat(root.CFrame.LookVector)
+		-- вернули на чекпоинт: вперёд по трассе (персонаж в этот момент может ещё кувыркаться после удара)
+		local forward = course or flat(root.CFrame.LookVector)
 		if forward then
 			manualUntil = 0
 			rotate(camera, wrap(yawOf(forward) - yaw))
@@ -211,11 +216,13 @@ RunService:BindToRenderStep("FollowCamera", Enum.RenderPriority.Camera.Value + 1
 	local velocity = flat(root.AssemblyLinearVelocity)
 	local speed = (root.AssemblyLinearVelocity * FLAT).Magnitude
 	local intent = flat(humanoid.MoveDirection)
-	-- линия трассы (знает, куда «вперёд»): выравниваем, как только игрок жмёт движение —
-	-- даже если упёрся в стенку и почти стоит
-	local course = if racing and now >= manualUntil and (intent or speed >= C.MinSpeed) then pathDirection(pos) else nil
+	local turnSpeed = C.TurnSpeed
 	if course then
-		target = course
+		-- привязка к трассе: всегда (стоит, бежит, сбили), кроме момента, когда игрок сам оглядывается
+		if now >= manualUntil then
+			target = course
+			turnSpeed = C.LockTurnSpeed
+		end
 	elseif now >= manualUntil and speed >= C.MinSpeed and velocity then
 		-- срезка — ось дороги, иначе — бег
 		local axis = roadAxis(pos + velocity * C.LookAhead, look) or roadAxis(pos, look)
@@ -229,7 +236,7 @@ RunService:BindToRenderStep("FollowCamera", Enum.RenderPriority.Camera.Value + 1
 	end
 
 	if target then
-		local alpha = 1 - math.exp(-C.TurnSpeed * dt)
+		local alpha = 1 - math.exp(-turnSpeed * dt)
 		local delta = wrap(yawOf(target) - yaw) * alpha
 		rotate(camera, delta)
 		lastYaw = yaw + delta
