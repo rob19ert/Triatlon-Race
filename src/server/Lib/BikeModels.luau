@@ -29,6 +29,29 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 	local function bar(name: string, a: Vector3,b: Vector3,width: number,col: Color3,mat: Enum.Material)
 		piece(name,Enum.PartType.Cylinder,vec((a-b).Magnitude,width,width),CFrame.lookAt((a+b)/2,b)*CFrame.Angles(0,math.pi/2,0),col,mat)
 	end
+	-- «Полировка» под иконки магазина (все велосипеды): рама толще, стыки скруглены, седло крупнее.
+	local FRAME_TUBES = { TopTube = true, DownTube = true, SeatTube = true, HeadTube = true,
+		ChainStayL = true, ChainStayR = true, SeatStayL = true, SeatStayR = true, ForkL = true, ForkR = true }
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and FRAME_TUBES[part.Name] then
+			part.Size = vec(part.Size.X, part.Size.Y * 1.3, part.Size.Z * 1.3)
+			part.Reflectance = 0.06
+		end
+	end
+	local frameColor = accent
+	local top = model:FindFirstChild("TopTube", true) :: BasePart?
+	if top then
+		frameColor = top.Color
+	end
+	oval("JointHead", 0, 2.1, -1.53, .58, .58, .58, frameColor, smooth)
+	oval("JointSeat", 0, 2.02, .5, .46, .46, .46, frameColor, smooth)
+	for _, side in {-1, 1} do
+		oval("JointDropout", side * .18, 1.3, 1.9, .3, .3, .3, frameColor, smooth)
+	end
+	local seat = model:FindFirstChild("Seat", true) :: BasePart?
+	if seat then
+		seat.Size = vec(.9, .36, 1.3) -- седло пошире и потолще (шар сплющить нельзя — Ball всегда круглый)
+	end
 	-- Keep the axle motors as the animation roots, and lace the open wheels to them.
 	if id ~= "ember" and id ~= "violet" then
 		for _, name in {"FrontWheel", "RearWheel"} do
@@ -40,16 +63,17 @@ function BikeModels.build(template: Model, id: string, accent: Color3): Model
 					part.Transparency = 1
 				end
 			end
-			local segments = 20
+			local segments = 28
 			for i = 1, segments do
 				local angle = i * math.pi * 2 / segments
 				local radial = CFrame.new(center) * CFrame.Angles(angle, 0, 0)
-				piece("Tread", Enum.PartType.Block, vec(.31,.21,.41), radial*CFrame.new(0,1.19,0), ink, smooth, axle)
-				piece("Rim", Enum.PartType.Block, vec(.21,.12,.36), radial*CFrame.new(0,1.05,0), rimColor, metal, axle)
+				piece("Tread", Enum.PartType.Block, vec(.42,.3,.32), radial*CFrame.new(0,1.2,0), ink, smooth, axle)
+				piece("Rim", Enum.PartType.Block, vec(.26,.14,.28), radial*CFrame.new(0,1.0,0), rimColor, smooth, axle)
 				if i % 2 == 0 then
-					piece("Spoke", Enum.PartType.Block, vec(.05,.95,.06), radial*CFrame.new(0,.56,0), cream, metal, axle)
+					piece("Spoke", Enum.PartType.Block, vec(.045,.9,.045), radial*CFrame.new(0,.52,0), cream, metal, axle)
 				end
 			end
+			piece("Hub", Enum.PartType.Cylinder, vec(.5,.42,.42), CFrame.new(center), rimColor, metal, axle)
 		end
 	end
 	local function wheels(disc: Color3, trim: Color3)
