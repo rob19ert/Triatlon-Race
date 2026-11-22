@@ -228,6 +228,46 @@ local function pickLane(player: Player, range: Range, position: Vector3): Lane?
 	return nearestFreeLane(range, position)
 end
 
+-- Где стоит (лежит) стрелок на полосе. Лёжа — на животе головой к мишеням: корень ниже и чуть позади
+-- точки глаз (камера стрелка — из Eye, тело на неё не влияет). Стоя — как раньше.
+local floorParams = RaycastParams.new()
+floorParams.FilterType = Enum.RaycastFilterType.Exclude
+local function shooterCFrame(range: Range, lane: Lane): CFrame
+	local eye = lane.eye.CFrame
+	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
+	if range.stance ~= "Prone" then
+		local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
+		return CFrame.lookAt(rootPos, rootPos + look)
+	end
+	local ignore: { Instance } = { range.model:FindFirstChild("Lanes") or range.model }
+	for _, p in Players:GetPlayers() do
+		if p.Character then
+			table.insert(ignore, p.Character)
+		end
+	end
+	local bots = workspace:FindFirstChild(Config.Bots.FolderName)
+	if bots then
+		table.insert(ignore, bots)
+	end
+	floorParams.FilterDescendantsInstances = ignore
+	local hit = workspace:Raycast(eye.Position, Vector3.new(0, -12, 0), floorParams)
+	local floorY = if hit then hit.Position.Y else eye.Position.Y - 4.5
+	local pos = Vector3.new(eye.Position.X, floorY + C.ProneRootAboveFloor, eye.Position.Z) - look * C.ProneBack
+	-- лицом вниз, макушкой к мишеням
+	return CFrame.lookAt(pos, pos + look) * CFrame.Angles(-math.pi / 2, 0, 0)
+end
+
+-- После стрельбы лёжа — поднять на ноги на том же месте (иначе персонаж вскакивает рывком).
+local function standUp(model: Model, range: Range, lane: Lane)
+	if range.stance ~= "Prone" then
+		return
+	end
+	local eye = lane.eye.CFrame
+	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
+	local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
+	model:PivotTo(CFrame.lookAt(rootPos, rootPos + look))
+end
+
 local function startSession(player: Player, range: Range, root: BasePart)
 	local lane = pickLane(player, range, root.Position)
 	if not lane then
@@ -280,11 +320,9 @@ local function startSession(player: Player, range: Range, root: BasePart)
 	player:SetAttribute(Attributes.RangeOrder, range.order)
 	player:SetAttribute(Attributes.RangeMarks, "")
 
-	-- ставим на рубеж лицом к мишеням и фиксируем
-	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
-	local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
+	-- ставим на рубеж лицом к мишеням (лёжа — ложимся) и фиксируем
 	root.AssemblyLinearVelocity = Vector3.zero
-	character:PivotTo(CFrame.lookAt(rootPos, rootPos + look))
+	character:PivotTo(shooterCFrame(range, lane))
 	root.Anchored = true
 	setHoldAttributes(player, session)
 
@@ -320,6 +358,9 @@ local function endSession(player: Player, session: Session)
 	player:SetAttribute(Attributes.RangeMarks, nil)
 	local root = getRoot(player)
 	if root then
+		if player.Character then
+			standUp(player.Character, session.range, session.lane)
+		end
 		root.Anchored = false
 	end
 end
@@ -549,10 +590,7 @@ function ShootingService.botClaimLane(rangeOrder: number, slot: number, owner: a
 	end
 	laneOccupant[lane] = owner
 	resetLaneTargets(lane, range.stance, false)
-	local eye = lane.eye.CFrame
-	local look = Vector3.new(eye.LookVector.X, 0, eye.LookVector.Z).Unit
-	local rootPos = eye.Position - Vector3.new(0, C.EyeAboveRoot, 0)
-	return CFrame.lookAt(rootPos, rootPos + look), lane.index, #lane.targets
+	return shooterCFrame(range, lane), lane.index, #lane.targets
 end
 
 function ShootingService.botCloseTarget(rangeOrder: number, laneIndex: number, targetIndex: number)
@@ -569,6 +607,9 @@ function ShootingService.botReleaseLane(rangeOrder: number, laneIndex: number, o
 	local lane = range and findLane(range, laneIndex)
 	if lane and laneOccupant[lane] == owner then
 		laneOccupant[lane] = nil
+	end
+	if range and lane and typeof(owner) == "table" and owner.model then
+		standUp(owner.model, range, lane)
 	end
 end
 

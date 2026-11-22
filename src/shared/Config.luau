@@ -120,6 +120,20 @@ local Config = {
 		MinShotInterval = 0.6, -- с, перезарядка затвора
 		ShotTimeTolerance = 0.35, -- с, насколько метка выстрела с клиента может отставать от сервера
 		EyeAboveRoot = 1.5, -- глаза стрелка выше HumanoidRootPart
+		ProneRootAboveFloor = 0.9, -- лёжа: корень над полом (на животе)
+		ProneBack = 1.6, -- лёжа: корень на столько стад позади точки глаз (голова — у прицела)
+		-- винтовка и поза стрелка у других клиентов (RangePose): смещения — от корня в «прицельной» рамке
+		-- (вперёд = на мишени); углы рук — Transform суставов, градусы {X, Y, Z}
+		Rifle = {
+			WoodColor = Color3.fromRGB(122, 78, 44),
+			MetalColor = Color3.fromRGB(38, 40, 50),
+			AccentColor = Color3.fromRGB(225, 60, 60),
+			StandingOffset = CFrame.new(0.55, 1.2, -0.2),
+			ProneOffset = CFrame.new(0.35, 0.15, -1.3),
+			StandingArms = { rightShoulder = { 80, 0, 0 }, leftShoulder = { 90, 0, -20 }, elbow = 15 },
+			ProneArms = { rightShoulder = { 160, 0, 0 }, leftShoulder = { 165, 0, -10 }, elbow = 25 },
+			ProneNeckDeg = 55,
+		},
 		FinishDelay = 1, -- с после последнего выстрела до выхода с рубежа
 
 		-- по стойке (атрибут Stance у стрельбища)
