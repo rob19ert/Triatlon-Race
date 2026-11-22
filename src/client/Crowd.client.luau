@@ -4,12 +4,14 @@
 --  * рассаживаются по рядам с тегом StandRow (атрибут Facing — куда смотреть);
 --  * в покое слегка покачиваются;
 --  * прыгают и машут, когда рядом пробегает гонщик или кто-то финишировал;
---  * дальше AnimateRadius от камеры замирают — экономим кадр на телефонах.
+--  * дальше AnimateRadius от камеры замирают — экономим кадр на телефонах;
+--  * ряды строятся постепенно (RowsPerFrame за кадр), на телефоне фанатов меньше (MobileFillScale).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -17,6 +19,11 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 local Types = require(Shared:WaitForChild("Types"))
 
 local C = Config.Crowd
+
+-- телефон/планшет: тач без клавиатуры
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local FILL_CHANCE = if isMobile then C.FillChance * C.MobileFillScale else C.FillChance
+local ANIMATE_RADIUS = if isMobile then C.MobileAnimateRadius else C.AnimateRadius
 
 local SHIRTS = {
 	Color3.fromRGB(235, 60, 60), Color3.fromRGB(60, 140, 255), Color3.fromRGB(255, 200, 40),
@@ -102,7 +109,7 @@ local function fillRow(row: Instance)
 	local top = row.Position.Y + row.Size.Y / 2
 	local z = -length / 2 + C.SeatSpacing / 2
 	while z <= length / 2 - C.SeatSpacing / 2 do
-		if rng:NextNumber() < C.FillChance then
+		if rng:NextNumber() < FILL_CHANCE then
 			local pos = row.CFrame:PointToWorldSpace(Vector3.new(0, 0, z))
 			local basePos = Vector3.new(pos.X, top, pos.Z)
 			table.insert(fans, makeFan(CFrame.lookAt(basePos, basePos + dir)))
@@ -112,7 +119,37 @@ local function fillRow(row: Instance)
 	fansByRow[row] = fans
 end
 
+-- очередь постройки: ряды строим понемногу, по кадрам
+local queue: { Instance } = {}
+local queued: { [Instance]: boolean } = {}
+
+local function enqueue(row: Instance)
+	if fansByRow[row] or queued[row] then
+		return
+	end
+	queued[row] = true
+	table.insert(queue, row)
+end
+
+task.spawn(function()
+	while true do
+		local built = 0
+		while #queue > 0 and built < C.RowsPerFrame do
+			local row = table.remove(queue, 1) :: Instance
+			if queued[row] then
+				queued[row] = nil
+				if row.Parent then
+					fillRow(row)
+					built += 1
+				end
+			end
+		end
+		task.wait()
+	end
+end)
+
 local function clearRow(row: Instance)
+	queued[row] = nil
 	local fans = fansByRow[row]
 	if not fans then
 		return
@@ -126,10 +163,10 @@ local function clearRow(row: Instance)
 end
 
 for _, row in CollectionService:GetTagged(C.RowTag) do
-	fillRow(row)
+	enqueue(row)
 end
 -- при стриминге ряды приходят и уходят
-CollectionService:GetInstanceAddedSignal(C.RowTag):Connect(fillRow)
+CollectionService:GetInstanceAddedSignal(C.RowTag):Connect(enqueue)
 CollectionService:GetInstanceRemovedSignal(C.RowTag):Connect(clearRow)
 
 ---------------------------------------------------------------- кто ликует
@@ -227,7 +264,7 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	local camPos = workspace.CurrentCamera.CFrame.Position
-	local radius2 = C.AnimateRadius * C.AnimateRadius
+	local radius2 = ANIMATE_RADIUS * ANIMATE_RADIUS
 	local t = os.clock()
 	local blend = math.clamp(dt * 4, 0, 1)
 	table.clear(movedParts)
