@@ -230,7 +230,7 @@
 - **Приглашения** ✅: кнопка «👥 Invite friends +200 XP» (лобби и итоги, `InviteClient`) → окно приглашений Roblox; друг, впервые зашедший по приглашению (`JoinData.ReferredByPlayerId`, запасной — `LaunchData`), даёт +200 XP пригласившему (даже не в сети) и +100 XP новичку — один раз на нового игрока (`DataService.checkReferral`, поля `referredBy`, `referrals`). В Studio окна приглашений нет — проверить на живом сервере.
 - **Ежедневный бонус** ✅: первый финиш за день (UTC) — +150 XP и уведомление (`lastDaily`). Проверено: 5500 → 5750 XP (+100 финиш +150 бонус).
 - **Рекорды недели** ✅: `LeaderboardService` — лучшее время за неделю (пн–вс UTC) в `OrderedDataStore` (имя с номером недели), топ-10 на табло `Workspace/WeeklyBoard` справа от точки появления (мир). Проверено: финиш → «1. rob19ert1 0:09.94».
-- **Значки** — код готов (`AwardService`: Welcome, First Finish, Clean Shooter 10/10, Race Winner, Sub 1:30), иконки — `~/Desktop/ChampionChaos/badges`. Ждут создания в Creator Hub и ID в `Config.Badges` (0 — не выдаётся).
+- **Значки** ✅ (22.11.2026): созданы пользователем в Creator Hub (MCP не может загружать значки), ID в `Config.Badges`; `AwardService` — Welcome (вход), First Finish, Clean Shooter (10/10), Race Winner (1-е место), Sub 1:30. Проверено: все 5 ID активны (`GetBadgeInfoAsync`), Welcome выдан при входе. Остальные — при честном финише (через G не проверяли, чтобы не выдать значки читом).
 
 ## Фаза 4. Расширение
 - Тренировка с призраком (запись лучшего заезда, боксы выключены), еженедельные лидерборды.

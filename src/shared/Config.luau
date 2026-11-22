@@ -468,11 +468,11 @@ local Config = {
 
 	-- Значки (AwardService). ID — из Creator Hub (Engagement → Badges); 0 — значок ещё не создан, не выдаётся.
 	Badges = {
-		Welcome = 0, -- зашёл в игру
-		FirstFinish = 0, -- первый финиш
-		CleanShooter = 0, -- стрельба 10/10 за гонку
-		Champion = 0, -- 1-е место (в гонке хотя бы с одним соперником, боты считаются)
-		Speedster = 0, -- финиш быстрее SpeedsterSeconds
+		Welcome = 4021728823075972, -- зашёл в игру
+		FirstFinish = 1146294831032722, -- первый финиш
+		CleanShooter = 3326813502591621, -- стрельба 10/10 за гонку
+		Champion = 1423001597232437, -- 1-е место (в гонке хотя бы с одним соперником, боты считаются)
+		Speedster = 1903216503347013, -- финиш быстрее SpeedsterSeconds
 		SpeedsterSeconds = 90,
 	},
 
