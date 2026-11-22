@@ -552,6 +552,29 @@ local Config = {
 		ToFinishSpacing = 4, -- стад между игроками по ширине
 		ToBikeKey = Enum.KeyCode.B, -- засчитать первую стрельбу и перенести в зону посадки на велосипед
 		SpawnBotKey = Enum.KeyCode.N, -- выпустить тестового бота со старта (проходит всю трассу)
+		-- режим «Кино» (CinemaCam, только Studio): K — следующий план, J — предыдущий; интерфейс скрыт, всегда день
+		CinemaNextKey = Enum.KeyCode.K,
+		CinemaPrevKey = Enum.KeyCode.J,
+		-- планы: from/to — камера в начале и в конце плана (плавно за Seconds), lookFrom/lookTo — куда смотрит;
+		-- follow = true — погоня за ближайшим гонщиком (смещение Offset от него)
+		CinemaShots = {
+			{ name = "Start", seconds = 14, fov = 55,
+				from = Vector3.new(11, 4.5, -36), to = Vector3.new(-7, 9, -92),
+				lookFrom = Vector3.new(0, 3, -20), lookTo = Vector3.new(0, 3, -62) },
+			{ name = "Pendulum", seconds = 12, fov = 50,
+				from = Vector3.new(-14, 5, -70), to = Vector3.new(-14, 6, -86),
+				lookFrom = Vector3.new(0, 6, -78), lookTo = Vector3.new(0, 6, -80) },
+			{ name = "Range", seconds = 14, fov = 50,
+				from = Vector3.new(0, 3, -226), to = Vector3.new(-2, 4, -262),
+				lookFrom = Vector3.new(60, 5, -240), lookTo = Vector3.new(60, 6, -262) },
+			{ name = "Train", seconds = 14, fov = 55,
+				from = Vector3.new(-136, 7, -532), to = Vector3.new(-128, 9, -526),
+				lookFrom = Vector3.new(-140, 5, -485), lookTo = Vector3.new(-145, 5, -485) },
+			{ name = "Chase", seconds = 0, fov = 65, follow = true, offset = Vector3.new(6, 4, 10) },
+			{ name = "Finish", seconds = 14, fov = 50,
+				from = Vector3.new(8, 3, -528), to = Vector3.new(14, 12, -560),
+				lookFrom = Vector3.new(0, 4, -490), lookTo = Vector3.new(0, 6, -540) },
+		},
 	},
 
 	-- Велопетля (фаза 2): трамплины, ускорители, возврат на дорогу
