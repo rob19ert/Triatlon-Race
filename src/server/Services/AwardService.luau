@@ -5,6 +5,7 @@
 local BadgeService = game:GetService("BadgeService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
@@ -46,6 +47,11 @@ end
 
 -- Игрок финишировал: place — место, seconds — итоговое время, racers — всего участников (с ботами).
 function AwardService.finished(player: Player, place: number, seconds: number, hits: number, shots: number, racers: number)
+	if RunService:IsStudio() then
+		-- в Studio финиш бывает «читерский» (клавиша G) — значки за гонку не выдаём, только пишем в лог
+		log("(Studio) %s finish badges skipped: place %d, %.1fs, %d/%d", player.Name, place, seconds, hits, shots)
+		return
+	end
 	AwardService.award(player, "FirstFinish")
 	if shots > 0 and hits == shots then
 		AwardService.award(player, "CleanShooter")
